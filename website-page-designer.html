@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PageForge — No-Code Website Builder</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #2563eb;
+    --secondary: #7c3aed;
+    --bg: #ffffff;
+    --text: #111827;
+    --font: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: var(--font); background: #f1f5f9; }
+
+  /* Builder Shell */
+  #builder-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  #topbar { height: 52px; background: #0f172a; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; z-index: 100; }
+  #main-area { display: flex; flex: 1; overflow: hidden; }
+  #sidebar { width: 260px; background: #1e293b; overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; }
+  #canvas-area { flex: 1; overflow-y: auto; background: #e2e8f0; display: flex; flex-direction: column; align-items: center; padding: 24px; }
+  #right-panel { width: 260px; background: #1e293b; overflow-y: auto; flex-shrink: 0; display: none; flex-direction: column; }
+  #right-panel.open { display: flex; }
+
+  /* Sidebar */
+  .sidebar-cat { padding: 8px 12px; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; color: #64748b; text-transform: uppercase; margin-top: 8px; }
+  .comp-item { margin: 2px 8px; border-radius: 8px; padding: 9px 12px; cursor: grab; background: #0f172a; border: 1px solid #334155; color: #cbd5e1; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 8px; transition: all .15s; user-select: none; }
+  .comp-item:hover { background: #1e40af; border-color: #3b82f6; color: #fff; }
+  .comp-item .icon { width: 28px; height: 20px; background: #1e293b; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+
+  /* Canvas */
+  #canvas-wrapper { width: 100%; max-width: 1200px; transition: max-width .3s ease; }
+  #canvas-wrapper.mobile { max-width: 375px; }
+  #canvas { min-height: 400px; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 32px rgba(0,0,0,.15); position: relative; }
+  #canvas-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; color: #94a3b8; pointer-events: none; }
+  .canvas-block { position: relative; }
+  .canvas-block:hover > .block-controls { opacity: 1; }
+  .block-controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .2s; z-index: 20; }
+  .block-controls button { width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+  .bc-dupe { background: #3b82f6; color: #fff; }
+  .bc-dupe:hover { background: #2563eb; }
+  .bc-del { background: #ef4444; color: #fff; }
+  .bc-del:hover { background: #dc2626; }
+  .bc-settings { background: #8b5cf6; color: #fff; }
+  .bc-settings:hover { background: #7c3aed; }
+  .bc-drag-handle { background: #64748b; color: #fff; cursor: grab; }
+  .bc-drag-handle:hover { background: #475569; }
+  .block-label { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.5); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: .5px; opacity: 0; transition: opacity .2s; z-index: 10; pointer-events: none; }
+  .canvas-block:hover > .block-label { opacity: 1; }
+  .sortable-ghost { opacity: .3; outline: 2px dashed #3b82f6; }
+  .sortable-drag { opacity: .9; box-shadow: 0 8px 40px rgba(0,0,0,.3); }
+  [contenteditable]:focus { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 2px; }
+  [contenteditable] { cursor: text; }
+
+  /* Topbar */
+  .tb-btn { height: 32px; padding: 0 14px; border-radius: 7px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all .15s; }
+  .tb-btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+  .tb-btn-ghost:hover { background: #1e293b; color: #fff; }
+  .tb-btn-primary { background: #2563eb; color: #fff; }
+  .tb-btn-primary:hover { background: #1d4ed8; }
+  .tb-btn-danger { background: #ef4444; color: #fff; }
+  .tb-btn-danger:hover { background: #dc2626; }
+  .tb-btn-success { background: #059669; color: #fff; }
+  .tb-btn-success:hover { background: #047857; }
+  .tb-sep { width: 1px; height: 24px; background: #334155; margin: 0 4px; }
+  .device-btn { width: 32px; height: 32px; border-radius: 7px; border: none; background: #1e293b; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all .15s; }
+  .device-btn.active { background: #2563eb; color: #fff; }
+  .device-btn:hover:not(.active) { background: #334155; color: #cbd5e1; }
+
+  /* Right panel */
+  .rp-section { padding: 14px; border-bottom: 1px solid #334155; }
+  .rp-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
+  .rp-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+  .rp-row label { font-size: 12px; color: #94a3b8; flex-shrink: 0; }
+  .rp-input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 5px 9px; font-size: 12px; width: 100%; outline: none; }
+  .rp-input:focus { border-color: #3b82f6; }
+  .rp-color { width: 36px; height: 28px; border-radius: 6px; border: 1px solid #334155; cursor: pointer; padding: 2px; background: #0f172a; }
+
+  /* Modals */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-box { background: #1e293b; border-radius: 14px; border: 1px solid #334155; padding: 24px; max-width: 700px; width: 90vw; max-height: 85vh; display: flex; flex-direction: column; gap: 16px; }
+  .modal-title { font-size: 16px; font-weight: 700; color: #f1f5f9; }
+  .modal-close { margin-left: auto; background: #334155; border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+  .modal-close:hover { background: #ef4444; color: #fff; }
+  pre#code-view { background: #0f172a; color: #7dd3fc; border-radius: 10px; padding: 16px; overflow: auto; font-size: 11px; flex: 1; line-height: 1.6; }
+
+  /* Global theme panel */
+  #theme-panel { position: absolute; top: 56px; right: 16px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; width: 240px; z-index: 200; display: none; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+  #theme-panel.open { display: block; }
+  .theme-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+  .theme-row label { font-size: 12px; color: #94a3b8; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: #059669; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; opacity: 0; transform: translateY(10px); transition: all .3s; z-index: 9999; pointer-events: none; }
+  #toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Map blocks */
+  .leaflet-map-container { width: 100%; height: 380px; z-index: 1; }
+  .map-info-card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+  /* Undo/redo status */
+  .undo-count { font-size: 10px; color: #475569; }
+
+  /* Grid overlay */
+  #canvas.grid-on { background-image: linear-gradient(rgba(59,130,246,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.1) 1px, transparent 1px); background-size: 20px 20px; }
+
+  /* Map marker manager */
+  .marker-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 12px; color: #cbd5e1; }
+  .marker-row input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 5px; padding: 3px 7px; font-size: 11px; flex: 1; outline: none; }
+  .btn-xs { padding: 3px 8px; border-radius: 5px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; }
+
+  /* Sidebar search */
+  #comp-search { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 7px 11px; font-size: 12px; width: calc(100% - 16px); margin: 8px; outline: none; }
+  #comp-search::placeholder { color: #475569; }
+  #comp-search:focus { border-color: #3b82f6; }
+</style>
+</head>
+<body>
+
+<div id="builder-shell">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div style="display:flex;align-items:center;gap:8px;margin-right:8px;">
+      <div style="width:28px;height:28px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;">⚒</div>
+      <span style="font-weight:700;color:#f1f5f9;font-size:14px;letter-spacing:-.3px;">PageForge</span>
+    </div>
+    <div class="tb-sep"></div>
+    <!-- Undo / Redo -->
+    <button class="tb-btn tb-btn-ghost" id="btn-undo" title="Undo (Ctrl+Z)">↩ Undo</button>
+    <button class="tb-btn tb-btn-ghost" id="btn-redo" title="Redo (Ctrl+Y)">↪ Redo</button>
+    <div class="tb-sep"></div>
+    <!-- Device preview -->
+    <button class="device-btn active" id="btn-desktop" title="Desktop">🖥</button>
+    <button class="device-btn" id="btn-mobile" title="Mobile (375px)">📱</button>
+    <div class="tb-sep"></div>
+    <!-- Grid -->
+    <button class="tb-btn tb-btn-ghost" id="btn-grid" title="Toggle Grid">⊞ Grid</button>
+    <!-- Theme -->
+    <button class="tb-btn tb-btn-ghost" id="btn-theme" title="Global Theme">🎨 Theme</button>
+    <div class="tb-sep"></div>
+    <!-- Code view -->
+    <button class="tb-btn tb-btn-ghost" id="btn-code">&#60;/&#62; Code</button>
+    <!-- Save/Load -->
+    <button class="tb-btn tb-btn-ghost" id="btn-save">💾 Save</button>
+    <button class="tb-btn tb-btn-ghost" id="btn-load">📂 Load</button>
+    <button class="tb-btn tb-btn-ghost" id="btn-export-json">⬆ JSON</button>
+    <label class="tb-btn tb-btn-ghost" style="cursor:pointer;" title="Import JSON Layout">
+      ⬇ Import
+      <input type="file" id="import-json-input" accept=".json" style="display:none;">
+    </label>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="tb-btn tb-btn-danger" id="btn-clear">🗑 Clear</button>
+      <button class="tb-btn tb-btn-success" id="btn-download">⬇ Download HTML</button>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div id="main-area">
+    <!-- LEFT SIDEBAR -->
+    <div id="sidebar">
+      <input type="text" id="comp-search" placeholder="🔍 Search components…">
+      <div id="comp-list"></div>
+    </div>
+
+    <!-- CANVAS AREA -->
+    <div id="canvas-area">
+      <div id="canvas-wrapper">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span style="font-size:11px;color:#64748b;font-weight:600;">CANVAS</span>
+          <span style="font-size:11px;color:#475569;" id="comp-count">0 components</span>
+        </div>
+        <div id="canvas">
+          <div id="canvas-empty">
+            <div style="font-size:48px;margin-bottom:12px;">🏗</div>
+            <div style="font-size:16px;font-weight:700;color:#475569;margin-bottom:6px;">Drop components here</div>
+            <div style="font-size:13px;color:#64748b;text-align:center;max-width:280px;">Drag components from the left sidebar to start building your page</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="right-panel">
+      <div style="padding:14px;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;font-weight:700;color:#f1f5f9;">⚙ Settings</span>
+        <button style="background:#334155;border:none;color:#94a3b8;width:24px;height:24px;border-radius:5px;cursor:pointer;font-size:12px;" id="btn-close-panel">✕</button>
+      </div>
+      <div id="right-panel-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- GLOBAL THEME PANEL -->
+<div id="theme-panel">
+  <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">🎨 Global Theme</div>
+  <div class="theme-row">
+    <label>Primary Color</label>
+    <input type="color" class="rp-color" id="th-primary" value="#2563eb">
+  </div>
+  <div class="theme-row">
+    <label>Secondary Color</label>
+    <input type="color" class="rp-color" id="th-secondary" value="#7c3aed">
+  </div>
+  <div class="theme-row">
+    <label>Background</label>
+    <input type="color" class="rp-color" id="th-bg" value="#ffffff">
+  </div>
+  <div class="theme-row">
+    <label>Text Color</label>
+    <input type="color" class="rp-color" id="th-text" value="#111827">
+  </div>
+  <div class="theme-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+    <label>Font Family</label>
+    <select class="rp-input" id="th-font">
+      <option value="'DM Sans', sans-serif">DM Sans</option>
+      <option value="'Playfair Display', serif">Playfair Display</option>
+      <option value="Georgia, serif">Georgia</option>
+      <option value="'Courier New', monospace">Courier New</option>
+      <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+      <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+    </select>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- CODE MODAL -->
+<div id="code-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:900px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="modal-title">&#60;/&#62; Generated HTML</span>
+      <button class="tb-btn tb-btn-primary" id="btn-copy-code" style="margin-left:auto;">📋 Copy</button>
+      <button class="modal-close" id="btn-close-code">✕</button>
+    </div>
+    <pre id="code-view"></pre>
+  </div>
+</div>
+
+<!-- MAP MARKER MANAGER MODAL -->
+<div id="map-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:620px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="modal-title">📍 Marker Manager</span>
+      <button class="modal-close" id="btn-close-map-modal">✕</button>
+    </div>
+    <div style="font-size:12px;color:#64748b;margin-top:-8px;">Click on the map in the canvas to add markers. Manage them here.</div>
+    <div style="background:#0f172a;border-radius:8px;padding:12px;">
+      <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Coordinates Picker</div>
+      <div style="font-size:12px;color:#94a3b8;" id="coord-display">Click on the map to pick coordinates</div>
+      <button class="btn-xs" style="background:#3b82f6;color:#fff;margin-top:8px;" id="btn-copy-coords">📋 Copy Coords</button>
+    </div>
+    <div id="marker-list" style="max-height:240px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <input class="rp-input" id="new-marker-name" placeholder="Marker name…">
+      <input class="rp-input" id="new-marker-desc" placeholder="Description…">
+      <button class="btn-xs" style="background:#059669;color:#fff;white-space:nowrap;" id="btn-add-marker">+ Add</button>
+    </div>
+    <div style="font-size:11px;color:#64748b;">Or paste JSON array:</div>
+    <textarea class="rp-input" id="marker-json" rows="3" placeholder='[{"name":"Place","lat":22.57,"lng":88.36,"description":"Info"}]' style="resize:vertical;"></textarea>
+    <button class="tb-btn tb-btn-primary" id="btn-load-marker-json" style="align-self:flex-start;">Load JSON Markers</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  STATE
+// ============================================================
+const State = {
+  blocks: [],          // [{id, name, html}]
+  undoStack: [],
+  redoStack: [],
+  selectedBlockId: null,
+  deviceMode: 'desktop',
+  gridOn: false,
+  mapInstances: {},   // mapId -> {map, markers:[]}
+  activeMapId: null,
+  lastCoords: null,
+};
+
+// ============================================================
+//  COMPONENT TEMPLATES
+// ============================================================
+const COMPONENTS = {
+  navigation: {
+    label: 'Navigation',
+    icon: '≡',
+    items: [
+      {
+        id: 'nav-simple',
+        label: 'Simple Navbar',
+        html: () => `<nav style="background:var(--primary);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
+  <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-1px;" contenteditable>PageForge</div>
+  <div style="display:flex;gap:24px;">
+    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">Home</a>
+    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">About</a>
+    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">Services</a>
+    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">Contact</a>
+  </div>
+</nav>`
+      },
+      {
+        id: 'nav-centered',
+        label: 'Centered Navbar',
+        html: () => `<nav style="background:#fff;padding:16px 32px;border-bottom:1px solid #e5e7eb;text-align:center;font-family:var(--font);">
+  <div style="font-size:24px;font-weight:800;color:var(--primary);margin-bottom:10px;" contenteditable>BrandName</div>
+  <div style="display:flex;gap:28px;justify-content:center;">
+    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Home</a>
+    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">About</a>
+    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Work</a>
+    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Blog</a>
+    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Contact</a>
+  </div>
+</nav>`
+      },
+      {
+        id: 'nav-left',
+        label: 'Left-aligned Navbar',
+        html: () => `<nav style="background:#0f172a;padding:14px 32px;display:flex;align-items:center;gap:40px;font-family:var(--font);">
+  <div style="font-size:20px;font-weight:800;color:#fff;" contenteditable>⚡ Brand</div>
+  <div style="display:flex;gap:20px;flex:1;">
+    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Home</a>
+    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Product</a>
+    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Pricing</a>
+    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Docs</a>
+  </div>
+  <button style="background:var(--primary);color:#fff;border:none;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;" contenteditable>Get Started</button>
+</nav>`
+      },
+      {
+        id: 'nav-right',
+        label: 'Right-aligned Navbar',
+        html: () => `<nav style="background:#fff;padding:14px 32px;display:flex;align-items:center;justify-content:flex-end;gap:24px;border-bottom:2px solid var(--primary);font-family:var(--font);">
+  <span style="margin-right:auto;font-size:20px;font-weight:800;color:var(--primary);" contenteditable>🌿 Leaf</span>
+  <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Features</a>
+  <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Pricing</a>
+  <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Team</a>
+  <button style="background:transparent;border:2px solid var(--primary);color:var(--primary);padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;" contenteditable>Login</button>
+  <button style="background:var(--primary);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;" contenteditable>Sign Up</button>
+</nav>`
+      },
+      {
+        id: 'nav-transparent',
+        label: 'Transparent Overlay Nav',
+        html: () => `<nav style="background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,transparent 100%);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
+  <div style="font-size:22px;font-weight:800;color:#fff;" contenteditable>✦ Studio</div>
+  <div style="display:flex;gap:28px;">
+    <a href="#" contenteditable style="color:rgba(255,255,255,.9);text-decoration:none;font-size:14px;font-weight:500;">Work</a>
+    <a href="#" contenteditable style="color:rgba(255,255,255,.9);text-decoration:none;font-size:14px;font-weight:500;">About</a>
+    <a href="#" contenteditable style="color:rgba(255,255,255,.9);text-decoration:none;font-size:14px;font-weight:500;">Journal</a>
+    <a href="#" style="color:#fff;text-decoration:none;font-size:14px;font-weight:700;border-bottom:2px solid #fff;padding-bottom:2px;" contenteditable>Contact</a>
+  </div>
+</nav>`
+      },
+    ]
+  },
+  content: {
+    label: 'Content',
+    icon: '◧',
+    items: [
+      {
+        id: 'hero-basic',
+        label: 'Hero Section',
+        html: () => `<section style="background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);padding:100px 40px;text-align:center;font-family:var(--font);">
+  <h1 style="font-size:56px;font-weight:800;color:#fff;margin:0 0 16px;line-height:1.1;" contenteditable>Build Something Amazing</h1>
+  <p style="font-size:20px;color:rgba(255,255,255,.85);max-width:560px;margin:0 auto 36px;line-height:1.6;" contenteditable>Create beautiful websites without writing a single line of code. Drag, drop, and launch.</p>
+  <div style="display:flex;gap:14px;justify-content:center;">
+    <button style="background:#fff;color:var(--primary);border:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;" contenteditable>Get Started Free</button>
+    <button style="background:transparent;border:2px solid rgba(255,255,255,.6);color:#fff;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" contenteditable>Watch Demo</button>
+  </div>
+</section>`
+      },
+      {
+        id: 'hero-dark',
+        label: 'Dark Hero',
+        html: () => `<section style="background:#0f172a;padding:100px 40px;text-align:center;font-family:var(--font);">
+  <div style="display:inline-block;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#60a5fa;padding:6px 16px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:24px;" contenteditable>✦ NOW IN BETA</div>
+  <h1 style="font-size:60px;font-weight:900;color:#f8fafc;margin:0 0 20px;line-height:1.05;" contenteditable>The Future of<br><span style="color:#3b82f6;">Web Building</span></h1>
+  <p style="font-size:18px;color:#64748b;max-width:500px;margin:0 auto 40px;line-height:1.7;" contenteditable>Powerful tools, zero complexity. Ship your next project in hours.</p>
+  <button style="background:var(--primary);color:#fff;border:none;padding:16px 36px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;" contenteditable>Start Building →</button>
+</section>`
+      },
+      {
+        id: 'two-col',
+        label: 'Two Column (Text + Image)',
+        html: () => `<section style="background:#fff;padding:80px 40px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;font-family:var(--font);">
+  <div>
+    <div style="color:var(--primary);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;" contenteditable>Our Story</div>
+    <h2 style="font-size:40px;font-weight:800;color:#0f172a;margin:0 0 18px;line-height:1.2;" contenteditable>We're on a Mission to Change the Web</h2>
+    <p style="font-size:16px;color:#475569;line-height:1.75;margin:0 0 28px;" contenteditable>We believe everyone should be able to create beautiful digital experiences without needing a developer. Our platform makes it easy.</p>
+    <button style="background:var(--primary);color:#fff;border:none;padding:12px 26px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Learn More</button>
+  </div>
+  <div style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);border-radius:16px;height:320px;display:flex;align-items:center;justify-content:center;font-size:64px;">🖼</div>
+</section>`
+      },
+      {
+        id: 'features-3col',
+        label: 'Features 3-Column',
+        html: () => `<section style="background:#f8fafc;padding:80px 40px;font-family:var(--font);">
+  <h2 style="text-align:center;font-size:36px;font-weight:800;color:#0f172a;margin:0 0 12px;" contenteditable>Everything You Need</h2>
+  <p style="text-align:center;color:#64748b;font-size:16px;margin:0 0 56px;" contenteditable>Powerful features out of the box</p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;">
+    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+      <div style="font-size:32px;margin-bottom:14px;">⚡</div>
+      <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Lightning Fast</h3>
+      <p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Optimized for speed with lazy loading and edge delivery.</p>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+      <div style="font-size:32px;margin-bottom:14px;">🎨</div>
+      <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Beautiful Design</h3>
+      <p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Professionally designed components that look great on any screen.</p>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+      <div style="font-size:32px;margin-bottom:14px;">🔒</div>
+      <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Secure & Reliable</h3>
+      <p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Enterprise-grade security with 99.9% uptime guarantee.</p>
+    </div>
+  </div>
+</section>`
+      },
+      {
+        id: 'cta-banner',
+        label: 'CTA Banner',
+        html: () => `<section style="background:var(--primary);padding:72px 40px;text-align:center;font-family:var(--font);">
+  <h2 style="font-size:40px;font-weight:800;color:#fff;margin:0 0 14px;" contenteditable>Ready to get started?</h2>
+  <p style="font-size:18px;color:rgba(255,255,255,.8);margin:0 0 36px;" contenteditable>Join 10,000+ creators who build with PageForge.</p>
+  <button style="background:#fff;color:var(--primary);border:none;padding:14px 36px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;" contenteditable>Start Free Trial</button>
+</section>`
+      },
+      {
+        id: 'testimonial',
+        label: 'Testimonial',
+        html: () => `<section style="background:#fff;padding:80px 40px;font-family:var(--font);">
+  <h2 style="text-align:center;font-size:32px;font-weight:800;color:#0f172a;margin:0 0 48px;" contenteditable>What Our Customers Say</h2>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;max-width:800px;margin:0 auto;">
+    <div style="background:#f8fafc;border-radius:14px;padding:28px;border-left:4px solid var(--primary);">
+      <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 18px;font-style:italic;" contenteditable>"This tool transformed how we build websites. Incredibly intuitive and powerful."</p>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">A</div>
+        <div><div style="font-size:13px;font-weight:700;color:#0f172a;" contenteditable>Alice Johnson</div><div style="font-size:12px;color:#64748b;" contenteditable>CEO, TechStart</div></div>
+      </div>
+    </div>
+    <div style="background:#f8fafc;border-radius:14px;padding:28px;border-left:4px solid var(--secondary);">
+      <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 18px;font-style:italic;" contenteditable>"We cut our development time by 80%. Absolutely worth it."</p>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;background:var(--secondary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">B</div>
+        <div><div style="font-size:13px;font-weight:700;color:#0f172a;" contenteditable>Bob Martinez</div><div style="font-size:12px;color:#64748b;" contenteditable>Founder, Bloom</div></div>
+      </div>
+    </div>
+  </div>
+</section>`
+      },
+    ]
+  },
+  footer: {
+    label: 'Footer',
+    icon: '▬',
+    items: [
+      {
+        id: 'footer-simple',
+        label: 'Simple Footer',
+        html: () => `<footer style="background:#0f172a;padding:32px 40px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
+  <span style="font-size:18px;font-weight:700;color:#fff;" contenteditable>PageForge</span>
+  <span style="font-size:13px;color:#475569;" contenteditable>© 2025 PageForge. All rights reserved.</span>
+  <div style="display:flex;gap:16px;">
+    <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Privacy</a>
+    <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Terms</a>
+    <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Contact</a>
+  </div>
+</footer>`
+      },
+      {
+        id: 'footer-multi',
+        label: 'Multi-Column Footer',
+        html: () => `<footer style="background:#0f172a;padding:64px 40px 32px;font-family:var(--font);">
+  <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px;">
+    <div>
+      <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:12px;" contenteditable>PageForge</div>
+      <p style="color:#64748b;font-size:14px;line-height:1.7;margin:0 0 20px;" contenteditable>Build beautiful websites without code. Fast, flexible, and powerful.</p>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;" contenteditable>Product</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Features</a>
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Pricing</a>
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Changelog</a>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;" contenteditable>Company</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">About</a>
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Blog</a>
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Careers</a>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;" contenteditable>Legal</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Privacy</a>
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Terms</a>
+        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Cookies</a>
+      </div>
+    </div>
+  </div>
+  <div style="border-top:1px solid #1e293b;padding-top:24px;text-align:center;color:#475569;font-size:13px;" contenteditable>© 2025 PageForge, Inc. All rights reserved.</div>
+</footer>`
+      },
+      {
+        id: 'footer-minimal',
+        label: 'Minimal Footer',
+        html: () => `<footer style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;font-family:var(--font);">
+  <span style="font-size:13px;color:#94a3b8;" contenteditable>Made with ❤️ by PageForge — © 2025</span>
+</footer>`
+      },
+      {
+        id: 'footer-dark-cta',
+        label: 'Footer with CTA',
+        html: () => `<footer style="background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);padding:64px 40px;text-align:center;font-family:var(--font);">
+  <h3 style="font-size:32px;font-weight:800;color:#fff;margin:0 0 12px;" contenteditable>Start your free trial today</h3>
+  <p style="color:#64748b;font-size:15px;margin:0 0 28px;" contenteditable>No credit card required. Cancel anytime.</p>
+  <button style="background:var(--primary);color:#fff;border:none;padding:13px 30px;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:40px;" contenteditable>Get Started →</button>
+  <div style="border-top:1px solid #1e293b;padding-top:28px;display:flex;justify-content:space-between;align-items:center;">
+    <span style="color:#fff;font-weight:700;font-size:16px;" contenteditable>PageForge</span>
+    <span style="color:#475569;font-size:13px;" contenteditable>© 2025 All rights reserved</span>
+    <div style="display:flex;gap:14px;">
+      <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Twitter</a>
+      <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">LinkedIn</a>
+      <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">GitHub</a>
+    </div>
+  </div>
+</footer>`
+      },
+      {
+        id: 'footer-newsletter',
+        label: 'Footer with Newsletter',
+        html: () => `<footer style="background:#0f172a;padding:60px 40px;font-family:var(--font);">
+  <div style="text-align:center;margin-bottom:48px;">
+    <h3 style="font-size:26px;font-weight:700;color:#fff;margin:0 0 10px;" contenteditable>Stay in the loop</h3>
+    <p style="color:#64748b;font-size:14px;margin:0 0 20px;" contenteditable>Subscribe for product updates and news.</p>
+    <div style="display:flex;gap:10px;justify-content:center;max-width:400px;margin:0 auto;">
+      <input style="flex:1;background:#1e293b;border:1px solid #334155;color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;outline:none;" placeholder="your@email.com">
+      <button style="background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Subscribe</button>
+    </div>
+  </div>
+  <div style="border-top:1px solid #1e293b;padding-top:24px;text-align:center;color:#475569;font-size:13px;" contenteditable>© 2025 PageForge</div>
+</footer>`
+      },
+    ]
+  },
+  maps: {
+    label: 'Maps',
+    icon: '🗺',
+    items: [
+      {
+        id: 'map-basic',
+        label: 'Basic Map Section',
+        isMap: true,
+        html: (mapId) => `<section style="font-family:var(--font);background:#fff;">
+  <div style="padding:40px 40px 20px;text-align:center;">
+    <h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 8px;" contenteditable>Find Us Here</h2>
+    <p style="font-size:16px;color:#64748b;margin:0;" contenteditable>We're located in the heart of the city</p>
+  </div>
+  <div id="${mapId}" class="leaflet-map-container" style="height:420px;"></div>
+  <div style="padding:20px 40px 40px;text-align:center;">
+    <p style="font-size:14px;color:#94a3b8;" contenteditable>📍 Click on the map to add markers and explore locations</p>
+  </div>
+</section>`
+      },
+      {
+        id: 'map-cards',
+        label: 'Map with Info Cards',
+        isMap: true,
+        html: (mapId) => `<section style="font-family:var(--font);background:#f8fafc;padding:60px 40px;">
+  <h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 8px;text-align:center;" contenteditable>Our Locations</h2>
+  <p style="text-align:center;color:#64748b;margin:0 0 36px;" contenteditable>Visit us at any of our offices worldwide</p>
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;max-width:1000px;margin:0 auto;">
+    <div id="${mapId}" class="leaflet-map-container" style="height:400px;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);"></div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🏢</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Headquarters</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>123 Main Street, Kolkata, WB 700001</p></div>
+      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🌏</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Asia Office</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>456 Tech Park, Mumbai, MH 400001</p></div>
+      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🌍</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Europe Office</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>789 Innovation Hub, Berlin, 10115</p></div>
+    </div>
+  </div>
+</section>`
+      },
+      {
+        id: 'map-full',
+        label: 'Full-Width Map',
+        isMap: true,
+        html: (mapId) => `<section style="font-family:var(--font);">
+  <div id="${mapId}" class="leaflet-map-container" style="height:500px;"></div>
+</section>`
+      },
+      {
+        id: 'map-events',
+        label: 'Event Map Section',
+        isMap: true,
+        html: (mapId) => `<section style="font-family:var(--font);background:linear-gradient(135deg,#0f172a,#1e1b4b);padding:60px 40px;">
+  <div style="text-align:center;margin-bottom:36px;">
+    <div style="display:inline-block;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);color:#a78bfa;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:16px;" contenteditable>📅 UPCOMING EVENT</div>
+    <h2 style="font-size:36px;font-weight:800;color:#fff;margin:0 0 10px;" contenteditable>PageForge Summit 2025</h2>
+    <p style="color:#64748b;font-size:15px;" contenteditable>Join us at our annual conference. See the exact venue on the map below.</p>
+  </div>
+  <div id="${mapId}" class="leaflet-map-container" style="height:380px;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4);"></div>
+</section>`
+      },
+      {
+        id: 'map-store-locator',
+        label: 'Store Locator',
+        isMap: true,
+        html: (mapId) => `<section style="font-family:var(--font);background:#fff;padding:60px 40px;">
+  <h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 8px;text-align:center;" contenteditable>Store Locator</h2>
+  <p style="text-align:center;color:#64748b;margin:0 0 28px;" contenteditable>Find the nearest store to you</p>
+  <div style="display:flex;gap:12px;max-width:500px;margin:0 auto 32px;">
+    <input style="flex:1;background:#f1f5f9;border:1px solid #e2e8f0;color:#0f172a;padding:11px 16px;border-radius:9px;font-size:14px;outline:none;" placeholder="Enter your city or pincode…">
+    <button style="background:var(--primary);color:#fff;border:none;padding:11px 22px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Search</button>
+  </div>
+  <div id="${mapId}" class="leaflet-map-container" style="height:420px;border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);"></div>
+</section>`
+      },
+    ]
+  }
+};
+
+// ============================================================
+//  UTILS
+// ============================================================
+function uid() { return 'b' + Math.random().toString(36).slice(2,9); }
+function mapUid() { return 'map_' + Math.random().toString(36).slice(2,9); }
+
+function showToast(msg, color='#059669') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escapeHtml(h) {
+  return h.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateCompCount() {
+  document.getElementById('comp-count').textContent = State.blocks.length + ' component' + (State.blocks.length !== 1 ? 's' : '');
+}
+
+// ============================================================
+//  SIDEBAR BUILDER
+// ============================================================
+function buildSidebar(filter='') {
+  const list = document.getElementById('comp-list');
+  list.innerHTML = '';
+  for (const [catKey, cat] of Object.entries(COMPONENTS)) {
+    const filteredItems = cat.items.filter(item => !filter || item.label.toLowerCase().includes(filter.toLowerCase()));
+    if (!filteredItems.length) continue;
+    const catEl = document.createElement('div');
+    catEl.innerHTML = `<div class="sidebar-cat">${cat.label}</div>`;
+    filteredItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'comp-item';
+      div.dataset.compId = item.id;
+      div.dataset.catKey = catKey;
+      div.innerHTML = `<span class="icon">${cat.icon}</span>${item.label}`;
+      div.setAttribute('draggable', true);
+      div.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('compId', item.id);
+        e.dataTransfer.setData('catKey', catKey);
+      });
+      catEl.appendChild(div);
+    });
+    list.appendChild(catEl);
+  }
+}
+
+document.getElementById('comp-search').addEventListener('input', e => buildSidebar(e.target.value));
+buildSidebar();
+
+// ============================================================
+//  CANVAS DRAG & DROP (Native + SortableJS)
+// ============================================================
+const canvas = document.getElementById('canvas');
+const canvasEmpty = document.getElementById('canvas-empty');
+
+canvas.addEventListener('dragover', e => { e.preventDefault(); canvas.style.outline = '2px dashed #3b82f6'; });
+canvas.addEventListener('dragleave', () => { canvas.style.outline = ''; });
+canvas.addEventListener('drop', e => {
+  e.preventDefault();
+  canvas.style.outline = '';
+  const compId = e.dataTransfer.getData('compId');
+  const catKey = e.dataTransfer.getData('catKey');
+  if (compId && catKey) addBlock(compId, catKey);
+});
+
+const sortable = Sortable.create(canvas, {
+  animation: 150,
+  handle: '.bc-drag-handle',
+  ghostClass: 'sortable-ghost',
+  dragClass: 'sortable-drag',
+  onEnd: () => syncBlocksFromDOM(),
+});
+
+function syncBlocksFromDOM() {
+  const ids = [...canvas.querySelectorAll('.canvas-block')].map(el => el.dataset.blockId);
+  State.blocks.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+}
+
+// ============================================================
+//  BLOCK MANAGEMENT
+// ============================================================
+function addBlock(compId, catKey, insertHtml = null, blockId = null) {
+  saveUndo();
+  const cat = COMPONENTS[catKey];
+  const item = cat.items.find(i => i.id === compId);
+  if (!item) return;
+
+  const id = blockId || uid();
+  const isMap = !!item.isMap;
+  let html;
+
+  if (insertHtml) {
+    html = insertHtml;
+  } else if (isMap) {
+    const mId = mapUid();
+    html = item.html(mId);
+  } else {
+    html = item.html();
+  }
+
+  const block = { id, compId, catKey, name: item.label, html, isMap };
+  State.blocks.push(block);
+
+  renderBlock(block);
+  updateCompCount();
+  canvasEmpty.style.display = 'none';
+
+  if (isMap) {
+    requestAnimationFrame(() => initMapInBlock(id, block));
+  }
+}
+
+function renderBlock(block) {
+  const existing = canvas.querySelector(`[data-block-id="${block.id}"]`);
+  if (existing) existing.remove();
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'canvas-block';
+  wrapper.dataset.blockId = block.id;
+
+  wrapper.innerHTML = `
+    <div class="block-label">${block.name}</div>
+    <div class="block-controls">
+      <button class="block-controls-btn bc-drag-handle" title="Drag to reorder">⠿</button>
+      <button class="block-controls-btn bc-settings" title="Settings" onclick="openSettings('${block.id}')">⚙</button>
+      <button class="block-controls-btn bc-dupe" title="Duplicate" onclick="duplicateBlock('${block.id}')">⧉</button>
+      <button class="block-controls-btn bc-del" title="Delete" onclick="deleteBlock('${block.id}')">✕</button>
+    </div>
+    <div class="block-content">${block.html}</div>
+  `;
+
+  canvas.appendChild(wrapper);
+  updateCompCount();
+}
+
+function deleteBlock(id) {
+  saveUndo();
+  State.blocks = State.blocks.filter(b => b.id !== id);
+  const el = canvas.querySelector(`[data-block-id="${id}"]`);
+  if (el) el.remove();
+  if (State.mapInstances[id]) {
+    State.mapInstances[id].map.remove();
+    delete State.mapInstances[id];
+  }
+  if (State.blocks.length === 0) canvasEmpty.style.display = '';
+  if (State.selectedBlockId === id) closeRightPanel();
+  updateCompCount();
+  showToast('Component deleted', '#ef4444');
+}
+
+function duplicateBlock(id) {
+  saveUndo();
+  const block = State.blocks.find(b => b.id === id);
+  if (!block) return;
+  const newId = uid();
+  let html = canvas.querySelector(`[data-block-id="${id}"] .block-content`).innerHTML;
+  // Replace map ids
+  if (block.isMap) {
+    const mId = mapUid();
+    html = html.replace(/id="map_[a-z0-9]+"/g, `id="${mId}"`);
+  }
+  const newBlock = { ...block, id: newId, html };
+  const idx = State.blocks.findIndex(b => b.id === id);
+  State.blocks.splice(idx + 1, 0, newBlock);
+  const existingEl = canvas.querySelector(`[data-block-id="${id}"]`);
+  const wrapper = createBlockWrapper(newBlock);
+  existingEl.insertAdjacentElement('afterend', wrapper);
+  if (newBlock.isMap) requestAnimationFrame(() => initMapInBlock(newId, newBlock));
+  updateCompCount();
+  showToast('Component duplicated');
+}
+
+function createBlockWrapper(block) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'canvas-block';
+  wrapper.dataset.blockId = block.id;
+  wrapper.innerHTML = `
+    <div class="block-label">${block.name}</div>
+    <div class="block-controls">
+      <button class="block-controls-btn bc-drag-handle" title="Drag">⠿</button>
+      <button class="block-controls-btn bc-settings" title="Settings" onclick="openSettings('${block.id}')">⚙</button>
+      <button class="block-controls-btn bc-dupe" title="Duplicate" onclick="duplicateBlock('${block.id}')">⧉</button>
+      <button class="block-controls-btn bc-del" title="Delete" onclick="deleteBlock('${block.id}')">✕</button>
+    </div>
+    <div class="block-content">${block.html}</div>
+  `;
+  return wrapper;
+}
+
+// ============================================================
+//  MAP MODULE
+// ============================================================
+function initMapInBlock(blockId, block) {
+  const blockEl = canvas.querySelector(`[data-block-id="${blockId}"]`);
+  if (!blockEl) return;
+  const mapEl = blockEl.querySelector('[id^="map_"]');
+  if (!mapEl) return;
+  const mapId = mapEl.id;
+
+  // Default center: Kolkata
+  const map = L.map(mapId, { zoomControl: true }).setView([22.5726, 88.3639], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(map);
+
+  const markers = [];
+
+  // Default marker
+  const defaultMarker = L.marker([22.5726, 88.3639])
+    .bindPopup('<b>Kolkata</b><br>City of Joy')
+    .addTo(map);
+  markers.push({ leaflet: defaultMarker, data: { name: 'Kolkata', lat: 22.5726, lng: 88.3639, description: 'City of Joy' } });
+
+  // Click to add marker
+  map.on('click', e => {
+    const { lat, lng } = e.latlng;
+    State.lastCoords = { lat: lat.toFixed(6), lng: lng.toFixed(6) };
+    State.activeMapId = blockId;
+    document.getElementById('coord-display').textContent = `Lat: ${State.lastCoords.lat}, Lng: ${State.lastCoords.lng}`;
+
+    const marker = L.marker([lat, lng])
+      .bindPopup(`<b>Custom Marker</b><br>Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`)
+      .addTo(map);
+    const data = { name: 'Custom Marker', lat: parseFloat(lat.toFixed(6)), lng: parseFloat(lng.toFixed(6)), description: '' };
+    markers.push({ leaflet: marker, data });
+    renderMarkerList(blockId);
+  });
+
+  // Reset view button
+  const ResetControl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const btn = L.DomUtil.create('button', '');
+      btn.innerHTML = '⟳';
+      btn.title = 'Reset View';
+      btn.style.cssText = 'background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;width:30px;height:30px;cursor:pointer;font-size:16px;';
+      L.DomEvent.on(btn, 'click', () => map.setView([22.5726, 88.3639], 13));
+      return btn;
+    }
+  });
+  map.addControl(new ResetControl());
+
+  State.mapInstances[blockId] = { map, markers, mapId };
+  setTimeout(() => map.invalidateSize(), 200);
+}
+
+function renderMarkerList(blockId) {
+  const instance = State.mapInstances[blockId];
+  if (!instance) return;
+  const list = document.getElementById('marker-list');
+  if (!list) return;
+  list.innerHTML = '';
+  instance.markers.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'marker-row';
+    row.innerHTML = `
+      <span style="font-size:14px;">📍</span>
+      <input value="${m.data.name}" placeholder="Name" onchange="updateMarkerName('${blockId}',${i},this.value)">
+      <span style="font-size:10px;color:#475569;">${m.data.lat?.toFixed(4)}, ${m.data.lng?.toFixed(4)}</span>
+      <button class="btn-xs" style="background:#ef4444;color:#fff;" onclick="removeMarker('${blockId}',${i})">✕</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function updateMarkerName(blockId, idx, name) {
+  const instance = State.mapInstances[blockId];
+  if (!instance) return;
+  instance.markers[idx].data.name = name;
+  instance.markers[idx].leaflet.setPopupContent(`<b>${name}</b><br>${instance.markers[idx].data.description}`);
+}
+
+function removeMarker(blockId, idx) {
+  const instance = State.mapInstances[blockId];
+  if (!instance) return;
+  instance.markers[idx].leaflet.remove();
+  instance.markers.splice(idx, 1);
+  renderMarkerList(blockId);
+}
+
+function loadMarkersFromJSON(blockId, jsonArray) {
+  const instance = State.mapInstances[blockId];
+  if (!instance) return;
+  // Clear existing
+  instance.markers.forEach(m => m.leaflet.remove());
+  instance.markers.length = 0;
+  const bounds = [];
+  jsonArray.forEach(d => {
+    const marker = L.marker([d.lat, d.lng])
+      .bindPopup(`<b>${d.name}</b><br>${d.description || ''}`)
+      .addTo(instance.map);
+    instance.markers.push({ leaflet: marker, data: d });
+    bounds.push([d.lat, d.lng]);
+  });
+  if (bounds.length) instance.map.fitBounds(bounds, { padding: [40, 40] });
+  renderMarkerList(blockId);
+  showToast(`Loaded ${jsonArray.length} markers`);
+}
+
+// ============================================================
+//  MAP MODAL
+// ============================================================
+document.getElementById('btn-close-map-modal').onclick = () => {
+  document.getElementById('map-modal').style.display = 'none';
+};
+
+document.getElementById('btn-copy-coords').onclick = () => {
+  if (!State.lastCoords) return;
+  navigator.clipboard.writeText(`${State.lastCoords.lat}, ${State.lastCoords.lng}`);
+  showToast('Coordinates copied!');
+};
+
+document.getElementById('btn-add-marker').onclick = () => {
+  const name = document.getElementById('new-marker-name').value.trim() || 'Marker';
+  const desc = document.getElementById('new-marker-desc').value.trim();
+  const coords = State.lastCoords;
+  if (!coords || !State.activeMapId) { showToast('Click on the map first!', '#f59e0b'); return; }
+  const instance = State.mapInstances[State.activeMapId];
+  if (!instance) return;
+  const marker = L.marker([parseFloat(coords.lat), parseFloat(coords.lng)])
+    .bindPopup(`<b>${name}</b><br>${desc}`)
+    .addTo(instance.map);
+  instance.markers.push({ leaflet: marker, data: { name, lat: parseFloat(coords.lat), lng: parseFloat(coords.lng), description: desc } });
+  renderMarkerList(State.activeMapId);
+  document.getElementById('new-marker-name').value = '';
+  document.getElementById('new-marker-desc').value = '';
+};
+
+document.getElementById('btn-load-marker-json').onclick = () => {
+  try {
+    const json = JSON.parse(document.getElementById('marker-json').value);
+    if (!State.activeMapId) { showToast('No map selected', '#f59e0b'); return; }
+    loadMarkersFromJSON(State.activeMapId, json);
+  } catch (e) {
+    showToast('Invalid JSON!', '#ef4444');
+  }
+};
+
+// Open map modal from canvas click
+canvas.addEventListener('click', e => {
+  const mapEl = e.target.closest('[id^="map_"]');
+  if (!mapEl) return;
+  const blockEl = e.target.closest('.canvas-block');
+  if (!blockEl) return;
+  const blockId = blockEl.dataset.blockId;
+  if (State.mapInstances[blockId]) {
+    State.activeMapId = blockId;
+    document.getElementById('map-modal').style.display = 'flex';
+    renderMarkerList(blockId);
+  }
+});
+
+// ============================================================
+//  RIGHT SETTINGS PANEL
+// ============================================================
+function openSettings(blockId) {
+  State.selectedBlockId = blockId;
+  const block = State.blocks.find(b => b.id === blockId);
+  const rp = document.getElementById('right-panel');
+  rp.classList.add('open');
+  const content = document.getElementById('right-panel-content');
+  content.innerHTML = `
+    <div class="rp-section">
+      <div class="rp-label">Block</div>
+      <div style="font-size:13px;color:#f1f5f9;font-weight:600;">${block.name}</div>
+    </div>
+    <div class="rp-section">
+      <div class="rp-label">Spacing</div>
+      <div class="rp-row"><label>Padding</label><input class="rp-input" type="text" id="rp-padding" placeholder="e.g. 40px"></div>
+      <div class="rp-row"><label>Margin</label><input class="rp-input" type="text" id="rp-margin" placeholder="e.g. 0 0 20px"></div>
+    </div>
+    <div class="rp-section">
+      <div class="rp-label">Background</div>
+      <div class="rp-row"><label>Color</label><input type="color" class="rp-color" id="rp-bg" value="#ffffff"></div>
+    </div>
+    <div class="rp-section">
+      <div class="rp-label">Alignment</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-xs" style="background:#334155;color:#94a3b8;flex:1;" onclick="applyAlign('${blockId}','left')">◀ Left</button>
+        <button class="btn-xs" style="background:#334155;color:#94a3b8;flex:1;" onclick="applyAlign('${blockId}','center')">Center</button>
+        <button class="btn-xs" style="background:#334155;color:#94a3b8;flex:1;" onclick="applyAlign('${blockId}','right')">Right ▶</button>
+      </div>
+    </div>
+    ${block.isMap ? `<div class="rp-section">
+      <div class="rp-label">Map</div>
+      <button class="tb-btn tb-btn-primary" style="width:100%;justify-content:center;" onclick="State.activeMapId='${blockId}';document.getElementById('map-modal').style.display='flex';renderMarkerList('${blockId}')">📍 Manage Markers</button>
+    </div>` : ''}
+    <div class="rp-section">
+      <div class="rp-label">Visibility</div>
+      <div class="rp-row"><label>Hidden</label>
+        <input type="checkbox" id="rp-hidden" style="accent-color:#3b82f6;" onchange="toggleBlockVisibility('${blockId}',this.checked)">
+      </div>
+    </div>
+  `;
+
+  document.getElementById('rp-padding').addEventListener('input', e => {
+    const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content > *`);
+    if (el) el.style.padding = e.target.value;
+  });
+  document.getElementById('rp-margin').addEventListener('input', e => {
+    const el = canvas.querySelector(`[data-block-id="${blockId}"]`);
+    if (el) el.style.margin = e.target.value;
+  });
+  document.getElementById('rp-bg').addEventListener('input', e => {
+    const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content > *`);
+    if (el) el.style.backgroundColor = e.target.value;
+  });
+}
+
+function closeRightPanel() {
+  document.getElementById('right-panel').classList.remove('open');
+  State.selectedBlockId = null;
+}
+
+function applyAlign(blockId, align) {
+  const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content > *`);
+  if (el) el.style.textAlign = align;
+}
+
+function toggleBlockVisibility(blockId, hidden) {
+  const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content`);
+  if (el) el.style.opacity = hidden ? '.3' : '1';
+}
+
+document.getElementById('btn-close-panel').onclick = closeRightPanel;
+
+// ============================================================
+//  GLOBAL THEME ENGINE
+// ============================================================
+function applyTheme() {
+  const root = document.documentElement;
+  root.style.setProperty('--primary', document.getElementById('th-primary').value);
+  root.style.setProperty('--secondary', document.getElementById('th-secondary').value);
+  root.style.setProperty('--bg', document.getElementById('th-bg').value);
+  root.style.setProperty('--text', document.getElementById('th-text').value);
+  root.style.setProperty('--font', document.getElementById('th-font').value);
+  canvas.style.background = document.getElementById('th-bg').value;
+}
+
+['th-primary','th-secondary','th-bg','th-text','th-font'].forEach(id => {
+  document.getElementById(id).addEventListener('input', applyTheme);
+});
+
+document.getElementById('btn-theme').onclick = () => {
+  document.getElementById('theme-panel').classList.toggle('open');
+};
+
+// Close theme panel on outside click
+document.addEventListener('click', e => {
+  const tp = document.getElementById('theme-panel');
+  if (!tp.contains(e.target) && e.target.id !== 'btn-theme') tp.classList.remove('open');
+});
+
+// ============================================================
+//  DEVICE PREVIEW
+// ============================================================
+document.getElementById('btn-desktop').onclick = () => {
+  document.getElementById('canvas-wrapper').classList.remove('mobile');
+  document.getElementById('btn-desktop').classList.add('active');
+  document.getElementById('btn-mobile').classList.remove('active');
+  State.deviceMode = 'desktop';
+  refreshMaps();
+};
+document.getElementById('btn-mobile').onclick = () => {
+  document.getElementById('canvas-wrapper').classList.add('mobile');
+  document.getElementById('btn-mobile').classList.add('active');
+  document.getElementById('btn-desktop').classList.remove('active');
+  State.deviceMode = 'mobile';
+  refreshMaps();
+};
+
+function refreshMaps() {
+  setTimeout(() => {
+    Object.values(State.mapInstances).forEach(inst => inst.map.invalidateSize());
+  }, 350);
+}
+
+// ============================================================
+//  GRID OVERLAY
+// ============================================================
+document.getElementById('btn-grid').onclick = () => {
+  State.gridOn = !State.gridOn;
+  canvas.classList.toggle('grid-on', State.gridOn);
+  document.getElementById('btn-grid').style.background = State.gridOn ? '#1e40af' : '';
+  document.getElementById('btn-grid').style.color = State.gridOn ? '#fff' : '';
+};
+
+// ============================================================
+//  UNDO / REDO
+// ============================================================
+function saveUndo() {
+  State.undoStack.push(JSON.stringify(State.blocks));
+  if (State.undoStack.length > 50) State.undoStack.shift();
+  State.redoStack = [];
+}
+
+function undo() {
+  if (!State.undoStack.length) return;
+  State.redoStack.push(JSON.stringify(State.blocks));
+  const prev = JSON.parse(State.undoStack.pop());
+  restoreBlocks(prev);
+  showToast('Undo', '#64748b');
+}
+
+function redo() {
+  if (!State.redoStack.length) return;
+  State.undoStack.push(JSON.stringify(State.blocks));
+  const next = JSON.parse(State.redoStack.pop());
+  restoreBlocks(next);
+  showToast('Redo', '#64748b');
+}
+
+function restoreBlocks(blocks) {
+  // Clean maps
+  Object.values(State.mapInstances).forEach(i => i.map.remove());
+  State.mapInstances = {};
+  canvas.innerHTML = '';
+  canvas.appendChild(canvasEmpty);
+  State.blocks = [];
+  if (!blocks.length) { canvasEmpty.style.display = ''; updateCompCount(); return; }
+  canvasEmpty.style.display = 'none';
+  blocks.forEach(block => {
+    State.blocks.push(block);
+    const wrapper = createBlockWrapper(block);
+    canvas.appendChild(wrapper);
+    if (block.isMap) requestAnimationFrame(() => initMapInBlock(block.id, block));
+  });
+  updateCompCount();
+}
+
+document.getElementById('btn-undo').onclick = undo;
+document.getElementById('btn-redo').onclick = redo;
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+});
+
+// ============================================================
+//  SAVE / LOAD (LocalStorage)
+// ============================================================
+document.getElementById('btn-save').onclick = () => {
+  const data = State.blocks.map(b => ({
+    ...b,
+    html: canvas.querySelector(`[data-block-id="${b.id}"] .block-content`)?.innerHTML || b.html
+  }));
+  localStorage.setItem('pageforge_layout', JSON.stringify(data));
+  showToast('Layout saved! 💾');
+};
+
+document.getElementById('btn-load').onclick = () => {
+  const raw = localStorage.getItem('pageforge_layout');
+  if (!raw) { showToast('No saved layout found', '#f59e0b'); return; }
+  try {
+    const blocks = JSON.parse(raw);
+    restoreBlocks(blocks);
+    showToast('Layout restored! 📂');
+  } catch { showToast('Failed to load', '#ef4444'); }
+};
+
+// Auto-restore on load
+window.addEventListener('load', () => {
+  const raw = localStorage.getItem('pageforge_layout');
+  if (raw) {
+    try {
+      const blocks = JSON.parse(raw);
+      if (blocks.length) { restoreBlocks(blocks); showToast('Auto-restored saved layout'); }
+    } catch {}
+  }
+});
+
+// ============================================================
+//  CLEAR
+// ============================================================
+document.getElementById('btn-clear').onclick = () => {
+  if (!confirm('Clear all components?')) return;
+  saveUndo();
+  restoreBlocks([]);
+  showToast('Canvas cleared', '#ef4444');
+};
+
+// ============================================================
+//  EXPORT JSON
+// ============================================================
+document.getElementById('btn-export-json').onclick = () => {
+  const data = State.blocks.map(b => ({
+    ...b,
+    html: canvas.querySelector(`[data-block-id="${b.id}"] .block-content`)?.innerHTML || b.html,
+    mapData: State.mapInstances[b.id]?.markers.map(m => m.data) || []
+  }));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pageforge-layout.json';
+  a.click();
+  showToast('JSON exported!');
+};
+
+// ============================================================
+//  IMPORT JSON
+// ============================================================
+document.getElementById('import-json-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const blocks = JSON.parse(ev.target.result);
+      restoreBlocks(blocks);
+      showToast('Layout imported!');
+    } catch { showToast('Invalid JSON file', '#ef4444'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ============================================================
+//  CODE VIEW
+// ============================================================
+document.getElementById('btn-code').onclick = () => {
+  document.getElementById('code-view').textContent = generateHTML();
+  document.getElementById('code-modal').style.display = 'flex';
+};
+document.getElementById('btn-close-code').onclick = () => {
+  document.getElementById('code-modal').style.display = 'none';
+};
+document.getElementById('btn-copy-code').onclick = () => {
+  navigator.clipboard.writeText(generateHTML());
+  showToast('Code copied!');
+};
+
+// ============================================================
+//  DOWNLOAD HTML
+// ============================================================
+document.getElementById('btn-download').onclick = () => {
+  const html = generateHTML();
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'my-website.html';
+  a.click();
+  showToast('HTML downloaded!');
+};
+
+function generateHTML() {
+  const hasMap = State.blocks.some(b => b.isMap);
+  const bodyContent = State.blocks.map(b => {
+    const contentEl = canvas.querySelector(`[data-block-id="${b.id}"] .block-content`);
+    return contentEl ? contentEl.innerHTML : b.html;
+  }).join('\n');
+
+  const primary = document.getElementById('th-primary').value;
+  const secondary = document.getElementById('th-secondary').value;
+  const bg = document.getElementById('th-bg').value;
+  const text = document.getElementById('th-text').value;
+  const font = document.getElementById('th-font').value;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Website</title>
+${hasMap ? '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>' : ''}
+<style>
+  :root {
+    --primary: ${primary};
+    --secondary: ${secondary};
+    --bg: ${bg};
+    --text: ${text};
+    --font: ${font};
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); }
+  a { text-decoration: none; }
+  .leaflet-map-container { width: 100%; }
+</style>
+</head>
+<body>
+${bodyContent}
+${hasMap ? `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<script>
+document.querySelectorAll('[id^="map_"]').forEach(el => {
+  const map = L.map(el.id).setView([22.5726, 88.3639], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  L.marker([22.5726, 88.3639]).bindPopup('Location').addTo(map);
+});
+<\/script>` : ''}
+</body>
+</html>`;
+}
+
+// ============================================================
+//  UI POLISH
+// ============================================================
+// Highlight editable on hover
+canvas.addEventListener('mouseover', e => {
+  const ce = e.target.closest('[contenteditable]');
+  if (ce) ce.style.cursor = 'text';
+});
+</script>
+</body>
+</html>
