@@ -3,552 +3,573 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PageForge — No-Code Website Builder</title>
+<title>PageForge v2 — Enhanced Builder</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --primary: #2563eb;
-    --secondary: #7c3aed;
-    --bg: #ffffff;
-    --text: #111827;
-    --font: 'DM Sans', sans-serif;
-  }
-  * { box-sizing: border-box; }
-  body { font-family: var(--font); background: #f1f5f9; }
+/* ── Base Variables ── */
+:root{--primary:#2563eb;--secondary:#7c3aed;--bg:#ffffff;--text:#111827;--font:'DM Sans',sans-serif}
+*{box-sizing:border-box}
+body{font-family:var(--font);background:#e2e8f0;margin:0}
 
-  /* Builder Shell */
-  #builder-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-  #topbar { height: 52px; background: #0f172a; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; z-index: 100; }
-  #main-area { display: flex; flex: 1; overflow: hidden; }
-  #sidebar { width: 260px; background: #1e293b; overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; }
-  #canvas-area { flex: 1; overflow-y: auto; background: #e2e8f0; display: flex; flex-direction: column; align-items: center; padding: 24px; }
-  #right-panel { width: 260px; background: #1e293b; overflow-y: auto; flex-shrink: 0; display: none; flex-direction: column; }
-  #right-panel.open { display: flex; }
+/* ── Shell ── */
+#builder-shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#topbar{height:52px;background:#0f172a;display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;z-index:100;overflow-x:auto}
+#main-area{display:flex;flex:1;overflow:hidden}
 
-  /* Sidebar */
-  .sidebar-cat { padding: 8px 12px; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; color: #64748b; text-transform: uppercase; margin-top: 8px; }
-  .comp-item { margin: 2px 8px; border-radius: 8px; padding: 9px 12px; cursor: grab; background: #0f172a; border: 1px solid #334155; color: #cbd5e1; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 8px; transition: all .15s; user-select: none; }
-  .comp-item:hover { background: #1e40af; border-color: #3b82f6; color: #fff; }
-  .comp-item .icon { width: 28px; height: 20px; background: #1e293b; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+/* ── Sidebar ── */
+#sidebar{width:252px;background:#1e293b;overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column}
+.sidebar-cat{padding:8px 12px 4px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:#475569;text-transform:uppercase;margin-top:6px}
+.comp-item{margin:2px 8px;border-radius:8px;padding:8px 11px;cursor:grab;background:#0f172a;border:1px solid #1e293b;color:#94a3b8;font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px;transition:all .12s;user-select:none}
+.comp-item:hover{background:#1e3a8a;border-color:#3b82f6;color:#fff}
+.comp-item .ci-icon{width:26px;height:18px;background:#1e293b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+#comp-search{background:#0f172a;border:1px solid #1e293b;color:#e2e8f0;border-radius:8px;padding:7px 11px;font-size:12px;width:calc(100% - 16px);margin:8px;outline:none}
+#comp-search:focus{border-color:#3b82f6}
+#comp-search::placeholder{color:#334155}
 
-  /* Canvas */
-  #canvas-wrapper { width: 100%; max-width: 1200px; transition: max-width .3s ease; }
-  #canvas-wrapper.mobile { max-width: 375px; }
-  #canvas { min-height: 400px; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 32px rgba(0,0,0,.15); position: relative; }
-  #canvas-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; color: #94a3b8; pointer-events: none; }
-  .canvas-block { position: relative; }
-  .canvas-block:hover > .block-controls { opacity: 1; }
-  .block-controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .2s; z-index: 20; }
-  .block-controls button { width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
-  .bc-dupe { background: #3b82f6; color: #fff; }
-  .bc-dupe:hover { background: #2563eb; }
-  .bc-del { background: #ef4444; color: #fff; }
-  .bc-del:hover { background: #dc2626; }
-  .bc-settings { background: #8b5cf6; color: #fff; }
-  .bc-settings:hover { background: #7c3aed; }
-  .bc-drag-handle { background: #64748b; color: #fff; cursor: grab; }
-  .bc-drag-handle:hover { background: #475569; }
-  .block-label { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.5); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: .5px; opacity: 0; transition: opacity .2s; z-index: 10; pointer-events: none; }
-  .canvas-block:hover > .block-label { opacity: 1; }
-  .sortable-ghost { opacity: .3; outline: 2px dashed #3b82f6; }
-  .sortable-drag { opacity: .9; box-shadow: 0 8px 40px rgba(0,0,0,.3); }
-  [contenteditable]:focus { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 2px; }
-  [contenteditable] { cursor: text; }
+/* ── Canvas ── */
+#canvas-area{flex:1;overflow-y:auto;background:#cbd5e1;display:flex;flex-direction:column;align-items:center;padding:20px}
+#canvas-wrapper{width:100%;max-width:1200px;transition:max-width .3s ease}
+#canvas-wrapper.mobile{max-width:375px}
+#canvas-wrapper.tablet{max-width:768px}
+#canvas{min-height:400px;background:var(--bg);border-radius:12px;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,.18);position:relative}
+#canvas.grid-on{background-image:linear-gradient(rgba(59,130,246,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.08) 1px,transparent 1px);background-size:20px 20px}
+#canvas-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 40px;color:#94a3b8;pointer-events:none}
 
-  /* Topbar */
-  .tb-btn { height: 32px; padding: 0 14px; border-radius: 7px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all .15s; }
-  .tb-btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
-  .tb-btn-ghost:hover { background: #1e293b; color: #fff; }
-  .tb-btn-primary { background: #2563eb; color: #fff; }
-  .tb-btn-primary:hover { background: #1d4ed8; }
-  .tb-btn-danger { background: #ef4444; color: #fff; }
-  .tb-btn-danger:hover { background: #dc2626; }
-  .tb-btn-success { background: #059669; color: #fff; }
-  .tb-btn-success:hover { background: #047857; }
-  .tb-sep { width: 1px; height: 24px; background: #334155; margin: 0 4px; }
-  .device-btn { width: 32px; height: 32px; border-radius: 7px; border: none; background: #1e293b; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all .15s; }
-  .device-btn.active { background: #2563eb; color: #fff; }
-  .device-btn:hover:not(.active) { background: #334155; color: #cbd5e1; }
+/* ── Canvas Blocks ── */
+.canvas-block{position:relative;transition:outline .1s}
+.canvas-block.selected{outline:2px solid #3b82f6}
+.canvas-block:hover>.block-controls{opacity:1}
+.canvas-block:hover>.block-label{opacity:1}
+.block-controls{position:absolute;top:6px;right:6px;display:flex;gap:3px;opacity:0;transition:opacity .15s;z-index:30}
+.bc-btn{width:26px;height:26px;border-radius:5px;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .1s;flex-shrink:0}
+.bc-handle{background:#475569;color:#fff;cursor:grab}
+.bc-handle:hover{background:#334155}
+.bc-settings{background:#7c3aed;color:#fff}
+.bc-settings:hover{background:#6d28d9}
+.bc-dupe{background:#2563eb;color:#fff}
+.bc-dupe:hover{background:#1d4ed8}
+.bc-del{background:#ef4444;color:#fff}
+.bc-del:hover{background:#dc2626}
+.block-label{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.5px;opacity:0;transition:opacity .15s;z-index:10;pointer-events:none;text-transform:uppercase}
+.sortable-ghost{opacity:.25;outline:2px dashed #3b82f6}
+[contenteditable]:focus{outline:2px solid #3b82f6;outline-offset:1px;border-radius:2px;cursor:text}
+[contenteditable]:hover{cursor:text}
 
-  /* Right panel */
-  .rp-section { padding: 14px; border-bottom: 1px solid #334155; }
-  .rp-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
-  .rp-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
-  .rp-row label { font-size: 12px; color: #94a3b8; flex-shrink: 0; }
-  .rp-input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 5px 9px; font-size: 12px; width: 100%; outline: none; }
-  .rp-input:focus { border-color: #3b82f6; }
-  .rp-color { width: 36px; height: 28px; border-radius: 6px; border: 1px solid #334155; cursor: pointer; padding: 2px; background: #0f172a; }
+/* ── Right Panel ── */
+#right-panel{width:268px;background:#1e293b;overflow-y:auto;flex-shrink:0;display:none;flex-direction:column;border-left:1px solid #0f172a}
+#right-panel.open{display:flex}
+.rp-section{padding:12px 14px;border-bottom:1px solid #0f172a}
+.rp-label{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.rp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:8px}
+.rp-row label{font-size:11px;color:#64748b;flex-shrink:0;min-width:70px}
+.rp-input{background:#0f172a;border:1px solid #1e293b;color:#e2e8f0;border-radius:5px;padding:5px 8px;font-size:12px;width:100%;outline:none}
+.rp-input:focus{border-color:#3b82f6}
+.rp-color{width:34px;height:26px;border-radius:5px;border:1px solid #334155;cursor:pointer;padding:2px;background:#0f172a}
+.rp-tabs{display:flex;border-bottom:1px solid #0f172a;flex-shrink:0}
+.rp-tab{flex:1;padding:9px 4px;text-align:center;font-size:11px;font-weight:600;color:#475569;cursor:pointer;border-bottom:2px solid transparent;transition:all .12s}
+.rp-tab.active{color:#60a5fa;border-bottom-color:#3b82f6}
 
-  /* Modals */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-  .modal-box { background: #1e293b; border-radius: 14px; border: 1px solid #334155; padding: 24px; max-width: 700px; width: 90vw; max-height: 85vh; display: flex; flex-direction: column; gap: 16px; }
-  .modal-title { font-size: 16px; font-weight: 700; color: #f1f5f9; }
-  .modal-close { margin-left: auto; background: #334155; border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 16px; }
-  .modal-close:hover { background: #ef4444; color: #fff; }
-  pre#code-view { background: #0f172a; color: #7dd3fc; border-radius: 10px; padding: 16px; overflow: auto; font-size: 11px; flex: 1; line-height: 1.6; }
+/* ── Topbar Buttons ── */
+.tb-btn{height:30px;padding:0 11px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.tb-ghost{background:transparent;color:#64748b;border:1px solid #1e293b}
+.tb-ghost:hover{background:#1e293b;color:#cbd5e1}
+.tb-primary{background:#2563eb;color:#fff}
+.tb-primary:hover{background:#1d4ed8}
+.tb-danger{background:#ef4444;color:#fff}
+.tb-danger:hover{background:#dc2626}
+.tb-success{background:#059669;color:#fff}
+.tb-success:hover{background:#047857}
+.tb-sep{width:1px;height:22px;background:#1e293b;margin:0 2px;flex-shrink:0}
+.dv-btn{width:30px;height:30px;border-radius:6px;border:none;background:#0f172a;color:#475569;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .12s;flex-shrink:0}
+.dv-btn.active{background:#2563eb;color:#fff}
+.dv-btn:hover:not(.active){background:#1e293b;color:#94a3b8}
 
-  /* Global theme panel */
-  #theme-panel { position: absolute; top: 56px; right: 16px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; width: 240px; z-index: 200; display: none; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
-  #theme-panel.open { display: block; }
-  .theme-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
-  .theme-row label { font-size: 12px; color: #94a3b8; }
+/* ── Theme Panel ── */
+#theme-panel{position:fixed;top:56px;right:16px;background:#1e293b;border:1px solid #0f172a;border-radius:12px;padding:16px;width:248px;z-index:500;display:none;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+#theme-panel.open{display:block}
+.theme-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;gap:8px}
+.theme-row label{font-size:12px;color:#94a3b8}
+.theme-section-title{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px}
 
-  /* Toast */
-  #toast { position: fixed; bottom: 24px; right: 24px; background: #059669; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; opacity: 0; transform: translateY(10px); transition: all .3s; z-index: 9999; pointer-events: none; }
-  #toast.show { opacity: 1; transform: translateY(0); }
+/* ── Modals ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-box{background:#1e293b;border-radius:14px;border:1px solid #0f172a;padding:22px;max-width:700px;width:92vw;max-height:88vh;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.modal-header{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.modal-title{font-size:15px;font-weight:700;color:#f1f5f9}
+.modal-close{margin-left:auto;background:#334155;border:none;color:#94a3b8;width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:14px;flex-shrink:0}
+.modal-close:hover{background:#ef4444;color:#fff}
+pre#code-view{background:#0f172a;color:#7dd3fc;border-radius:10px;padding:14px;overflow:auto;font-size:11px;flex:1;line-height:1.6;min-height:200px}
 
-  /* Map blocks */
-  .leaflet-map-container { width: 100%; height: 380px; z-index: 1; }
-  .map-info-card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
+/* ── Toast ── */
+#toast{position:fixed;bottom:20px;right:20px;background:#059669;color:#fff;padding:9px 16px;border-radius:9px;font-size:12px;font-weight:600;opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999;pointer-events:none;max-width:300px}
+#toast.show{opacity:1;transform:translateY(0)}
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+/* ── Map ── */
+.leaflet-map-container{width:100%;height:380px;z-index:1}
+.map-info-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.marker-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #0f172a;font-size:11px;color:#cbd5e1}
+.marker-row input{background:#0f172a;border:1px solid #1e293b;color:#e2e8f0;border-radius:4px;padding:3px 6px;font-size:11px;flex:1;outline:none}
 
-  /* Undo/redo status */
-  .undo-count { font-size: 10px; color: #475569; }
+/* ── Misc ── */
+.btn-xs{padding:3px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:#1e293b;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
 
-  /* Grid overlay */
-  #canvas.grid-on { background-image: linear-gradient(rgba(59,130,246,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.1) 1px, transparent 1px); background-size: 20px 20px; }
+/* ── Rich Text Toolbar ── */
+.rte-toolbar{background:#0f172a;border-radius:6px;padding:4px;display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px}
+.rte-btn{background:#1e293b;border:none;color:#94a3b8;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;transition:all .1s}
+.rte-btn:hover{background:#3b82f6;color:#fff}
 
-  /* Map marker manager */
-  .marker-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 12px; color: #cbd5e1; }
-  .marker-row input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 5px; padding: 3px 7px; font-size: 11px; flex: 1; outline: none; }
-  .btn-xs { padding: 3px 8px; border-radius: 5px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; }
+/* ── Gallery Slider ── */
+.gallery-slide{display:none;position:relative}
+.gallery-slide.active{display:block}
+.gallery-nav-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);color:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;z-index:5;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.gallery-nav-btn:hover{background:rgba(0,0,0,.8)}
 
-  /* Sidebar search */
-  #comp-search { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 7px 11px; font-size: 12px; width: calc(100% - 16px); margin: 8px; outline: none; }
-  #comp-search::placeholder { color: #475569; }
-  #comp-search:focus { border-color: #3b82f6; }
+/* ── SEO Panel ── */
+#seo-panel{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #0f172a;border-radius:12px;padding:16px;width:380px;z-index:500;display:none;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+#seo-panel.open{display:block}
+
+/* ── Table Editor ── */
+.table-editor-cell{padding:6px 10px;border:1px solid #e2e8f0;min-width:80px;outline:none;font-size:14px}
+.table-editor-cell:focus{background:#eff6ff}
 </style>
 </head>
 <body>
-
 <div id="builder-shell">
-  <!-- TOP BAR -->
-  <div id="topbar">
-    <div style="display:flex;align-items:center;gap:8px;margin-right:8px;">
-      <div style="width:28px;height:28px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;">⚒</div>
-      <span style="font-weight:700;color:#f1f5f9;font-size:14px;letter-spacing:-.3px;">PageForge</span>
-    </div>
-    <div class="tb-sep"></div>
-    <!-- Undo / Redo -->
-    <button class="tb-btn tb-btn-ghost" id="btn-undo" title="Undo (Ctrl+Z)">↩ Undo</button>
-    <button class="tb-btn tb-btn-ghost" id="btn-redo" title="Redo (Ctrl+Y)">↪ Redo</button>
-    <div class="tb-sep"></div>
-    <!-- Device preview -->
-    <button class="device-btn active" id="btn-desktop" title="Desktop">🖥</button>
-    <button class="device-btn" id="btn-mobile" title="Mobile (375px)">📱</button>
-    <div class="tb-sep"></div>
-    <!-- Grid -->
-    <button class="tb-btn tb-btn-ghost" id="btn-grid" title="Toggle Grid">⊞ Grid</button>
-    <!-- Theme -->
-    <button class="tb-btn tb-btn-ghost" id="btn-theme" title="Global Theme">🎨 Theme</button>
-    <div class="tb-sep"></div>
-    <!-- Code view -->
-    <button class="tb-btn tb-btn-ghost" id="btn-code">&#60;/&#62; Code</button>
-    <!-- Save/Load -->
-    <button class="tb-btn tb-btn-ghost" id="btn-save">💾 Save</button>
-    <button class="tb-btn tb-btn-ghost" id="btn-load">📂 Load</button>
-    <button class="tb-btn tb-btn-ghost" id="btn-export-json">⬆ JSON</button>
-    <label class="tb-btn tb-btn-ghost" style="cursor:pointer;" title="Import JSON Layout">
-      ⬇ Import
-      <input type="file" id="import-json-input" accept=".json" style="display:none;">
-    </label>
-    <div style="margin-left:auto;display:flex;gap:8px;">
-      <button class="tb-btn tb-btn-danger" id="btn-clear">🗑 Clear</button>
-      <button class="tb-btn tb-btn-success" id="btn-download">⬇ Download HTML</button>
-    </div>
+
+<!-- ══════════════ TOPBAR ══════════════ -->
+<div id="topbar">
+  <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;">
+    <div style="width:26px;height:26px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;">⚒</div>
+    <span style="font-weight:800;color:#f1f5f9;font-size:13px;letter-spacing:-.3px;">PageForge</span>
+    <span style="background:#7c3aed;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;letter-spacing:.5px;">v2</span>
   </div>
-
-  <!-- MAIN AREA -->
-  <div id="main-area">
-    <!-- LEFT SIDEBAR -->
-    <div id="sidebar">
-      <input type="text" id="comp-search" placeholder="🔍 Search components…">
-      <div id="comp-list"></div>
-    </div>
-
-    <!-- CANVAS AREA -->
-    <div id="canvas-area">
-      <div id="canvas-wrapper">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <span style="font-size:11px;color:#64748b;font-weight:600;">CANVAS</span>
-          <span style="font-size:11px;color:#475569;" id="comp-count">0 components</span>
-        </div>
-        <div id="canvas">
-          <div id="canvas-empty">
-            <div style="font-size:48px;margin-bottom:12px;">🏗</div>
-            <div style="font-size:16px;font-weight:700;color:#475569;margin-bottom:6px;">Drop components here</div>
-            <div style="font-size:13px;color:#64748b;text-align:center;max-width:280px;">Drag components from the left sidebar to start building your page</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT PANEL -->
-    <div id="right-panel">
-      <div style="padding:14px;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:13px;font-weight:700;color:#f1f5f9;">⚙ Settings</span>
-        <button style="background:#334155;border:none;color:#94a3b8;width:24px;height:24px;border-radius:5px;cursor:pointer;font-size:12px;" id="btn-close-panel">✕</button>
-      </div>
-      <div id="right-panel-content"></div>
-    </div>
+  <div class="tb-sep"></div>
+  <button class="tb-btn tb-ghost" id="btn-undo" title="Undo Ctrl+Z">↩ Undo</button>
+  <button class="tb-btn tb-ghost" id="btn-redo" title="Redo Ctrl+Y">↪ Redo</button>
+  <div class="tb-sep"></div>
+  <button class="dv-btn active" id="btn-desktop" title="Desktop">🖥</button>
+  <button class="dv-btn" id="btn-tablet" title="Tablet 768px">⬛</button>
+  <button class="dv-btn" id="btn-mobile" title="Mobile 375px">📱</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn tb-ghost" id="btn-grid">⊞ Grid</button>
+  <button class="tb-btn tb-ghost" id="btn-theme">🎨 Theme</button>
+  <button class="tb-btn tb-ghost" id="btn-seo">🔍 SEO</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn tb-ghost" id="btn-code">&lt;/&gt; Code</button>
+  <button class="tb-btn tb-ghost" id="btn-save">💾 Save</button>
+  <button class="tb-btn tb-ghost" id="btn-load">📂 Load</button>
+  <button class="tb-btn tb-ghost" id="btn-export-json">⬆ JSON</button>
+  <label class="tb-btn tb-ghost" style="cursor:pointer;">⬇ Import<input type="file" id="import-json-input" accept=".json" style="display:none"></label>
+  <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;">
+    <button class="tb-btn tb-danger" id="btn-clear">🗑 Clear</button>
+    <button class="tb-btn tb-success" id="btn-download">⬇ Download</button>
   </div>
 </div>
 
-<!-- GLOBAL THEME PANEL -->
+<!-- ══════════════ MAIN ══════════════ -->
+<div id="main-area">
+
+  <!-- LEFT SIDEBAR -->
+  <div id="sidebar">
+    <input type="text" id="comp-search" placeholder="🔍 Search components…">
+    <div id="comp-list"></div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-area">
+    <div id="canvas-wrapper">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:.8px;text-transform:uppercase;">Canvas</span>
+        <span style="font-size:11px;color:#475569;" id="comp-count">0 components</span>
+      </div>
+      <div id="canvas">
+        <div id="canvas-empty">
+          <div style="font-size:44px;margin-bottom:10px;">🏗</div>
+          <div style="font-size:15px;font-weight:700;color:#475569;margin-bottom:6px;">Drop components here</div>
+          <div style="font-size:12px;color:#64748b;text-align:center;max-width:260px;line-height:1.6;">Drag from the left sidebar to start building</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SETTINGS PANEL -->
+  <div id="right-panel">
+    <div style="padding:12px 14px;border-bottom:1px solid #0f172a;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span style="font-size:12px;font-weight:700;color:#f1f5f9;">⚙ Block Settings</span>
+      <button style="background:#0f172a;border:none;color:#64748b;width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:11px;" id="btn-close-panel">✕</button>
+    </div>
+    <div class="rp-tabs">
+      <div class="rp-tab active" data-tab="style">Style</div>
+      <div class="rp-tab" data-tab="content">Content</div>
+      <div class="rp-tab" data-tab="advanced">Advanced</div>
+    </div>
+    <div id="right-panel-content" style="overflow-y:auto;flex:1;"></div>
+  </div>
+</div>
+</div><!-- end builder-shell -->
+
+<!-- ══════════════ THEME PANEL ══════════════ -->
 <div id="theme-panel">
-  <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">🎨 Global Theme</div>
-  <div class="theme-row">
-    <label>Primary Color</label>
-    <input type="color" class="rp-color" id="th-primary" value="#2563eb">
-  </div>
-  <div class="theme-row">
-    <label>Secondary Color</label>
-    <input type="color" class="rp-color" id="th-secondary" value="#7c3aed">
-  </div>
-  <div class="theme-row">
-    <label>Background</label>
-    <input type="color" class="rp-color" id="th-bg" value="#ffffff">
-  </div>
-  <div class="theme-row">
-    <label>Text Color</label>
-    <input type="color" class="rp-color" id="th-text" value="#111827">
-  </div>
-  <div class="theme-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
-    <label>Font Family</label>
+  <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:12px;">🎨 Global Theme</div>
+  <div class="theme-row"><label>Primary</label><input type="color" class="rp-color" id="th-primary" value="#2563eb"></div>
+  <div class="theme-row"><label>Secondary</label><input type="color" class="rp-color" id="th-secondary" value="#7c3aed"></div>
+  <div class="theme-row"><label>Background</label><input type="color" class="rp-color" id="th-bg" value="#ffffff"></div>
+  <div class="theme-row"><label>Text</label><input type="color" class="rp-color" id="th-text" value="#111827"></div>
+  <div class="theme-row"><label>Accent</label><input type="color" class="rp-color" id="th-accent" value="#f59e0b"></div>
+  <div style="margin-bottom:10px;">
+    <div class="theme-section-title">Font Family</div>
     <select class="rp-input" id="th-font">
-      <option value="'DM Sans', sans-serif">DM Sans</option>
-      <option value="'Playfair Display', serif">Playfair Display</option>
-      <option value="Georgia, serif">Georgia</option>
-      <option value="'Courier New', monospace">Courier New</option>
-      <option value="Helvetica, Arial, sans-serif">Helvetica</option>
-      <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+      <option value="'DM Sans',sans-serif">DM Sans</option>
+      <option value="'Playfair Display',serif">Playfair Display</option>
+      <option value="Georgia,serif">Georgia</option>
+      <option value="'Courier New',monospace">Courier New</option>
+      <option value="Helvetica,Arial,sans-serif">Helvetica</option>
+      <option value="'Trebuchet MS',sans-serif">Trebuchet MS</option>
+      <option value="system-ui,sans-serif">System UI</option>
+    </select>
+  </div>
+  <div>
+    <div class="theme-section-title">Border Radius Style</div>
+    <select class="rp-input" id="th-radius">
+      <option value="0px">Sharp</option>
+      <option value="6px">Rounded</option>
+      <option value="12px" selected>Soft</option>
+      <option value="24px">Pill</option>
     </select>
   </div>
 </div>
 
-<!-- TOAST -->
-<div id="toast"></div>
-
-<!-- CODE MODAL -->
-<div id="code-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:900px;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="modal-title">&#60;/&#62; Generated HTML</span>
-      <button class="tb-btn tb-btn-primary" id="btn-copy-code" style="margin-left:auto;">📋 Copy</button>
-      <button class="modal-close" id="btn-close-code">✕</button>
-    </div>
-    <pre id="code-view"></pre>
+<!-- ══════════════ SEO PANEL ══════════════ -->
+<div id="seo-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <span style="font-size:12px;font-weight:700;color:#f1f5f9;">🔍 SEO & Meta</span>
+    <button style="background:#0f172a;border:none;color:#64748b;width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:11px;" id="btn-close-seo">✕</button>
+  </div>
+  <div class="rp-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+    <label style="font-size:11px;color:#94a3b8;">Page Title</label>
+    <input class="rp-input" id="seo-title" value="My Website" placeholder="My Awesome Site">
+  </div>
+  <div class="rp-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;">
+    <label style="font-size:11px;color:#94a3b8;">Meta Description</label>
+    <textarea class="rp-input" id="seo-desc" rows="3" placeholder="Short description for search engines…" style="resize:vertical;"></textarea>
+  </div>
+  <div class="rp-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;">
+    <label style="font-size:11px;color:#94a3b8;">OG Image URL</label>
+    <input class="rp-input" id="seo-og" placeholder="https://…/image.jpg">
   </div>
 </div>
 
-<!-- MAP MARKER MANAGER MODAL -->
-<div id="map-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:620px;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="modal-title">📍 Marker Manager</span>
+<!-- ══════════════ TOAST ══════════════ -->
+<div id="toast"></div>
+
+<!-- ══════════════ CODE MODAL ══════════════ -->
+<div id="code-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:920px;">
+    <div class="modal-header">
+      <span class="modal-title">&lt;/&gt; Generated HTML</span>
+      <button class="tb-btn tb-primary" id="btn-copy-code" style="margin-left:auto;">📋 Copy</button>
+      <button class="modal-close" id="btn-close-code">✕</button>
+    </div>
+    <pre id="code-view" style="overflow:auto;flex:1;min-height:300px;"></pre>
+  </div>
+</div>
+
+<!-- ══════════════ MAP MODAL ══════════════ -->
+<div id="map-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:640px;">
+    <div class="modal-header">
+      <span class="modal-title">📍 Map & Marker Manager</span>
       <button class="modal-close" id="btn-close-map-modal">✕</button>
     </div>
-    <div style="font-size:12px;color:#64748b;margin-top:-8px;">Click on the map in the canvas to add markers. Manage them here.</div>
-    <div style="background:#0f172a;border-radius:8px;padding:12px;">
-      <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Coordinates Picker</div>
-      <div style="font-size:12px;color:#94a3b8;" id="coord-display">Click on the map to pick coordinates</div>
-      <button class="btn-xs" style="background:#3b82f6;color:#fff;margin-top:8px;" id="btn-copy-coords">📋 Copy Coords</button>
+    <div style="background:#0f172a;border-radius:8px;padding:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;">
+      <div>
+        <div style="font-size:10px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Last Clicked Coords</div>
+        <div style="font-size:12px;color:#94a3b8;" id="coord-display">Click on map canvas to pick coordinates</div>
+      </div>
+      <button class="btn-xs" style="background:#3b82f6;color:#fff;" id="btn-copy-coords">📋 Copy</button>
     </div>
-    <div id="marker-list" style="max-height:240px;overflow-y:auto;"></div>
-    <div style="display:flex;gap:8px;margin-top:4px;">
-      <input class="rp-input" id="new-marker-name" placeholder="Marker name…">
-      <input class="rp-input" id="new-marker-desc" placeholder="Description…">
-      <button class="btn-xs" style="background:#059669;color:#fff;white-space:nowrap;" id="btn-add-marker">+ Add</button>
+    <!-- Map Config -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0;">
+      <div>
+        <div style="font-size:10px;color:#475569;margin-bottom:4px;text-transform:uppercase;font-weight:700;">Default Lat</div>
+        <input class="rp-input" id="map-center-lat" value="22.5726" placeholder="Latitude">
+      </div>
+      <div>
+        <div style="font-size:10px;color:#475569;margin-bottom:4px;text-transform:uppercase;font-weight:700;">Default Lng</div>
+        <input class="rp-input" id="map-center-lng" value="88.3639" placeholder="Longitude">
+      </div>
     </div>
-    <div style="font-size:11px;color:#64748b;">Or paste JSON array:</div>
-    <textarea class="rp-input" id="marker-json" rows="3" placeholder='[{"name":"Place","lat":22.57,"lng":88.36,"description":"Info"}]' style="resize:vertical;"></textarea>
-    <button class="tb-btn tb-btn-primary" id="btn-load-marker-json" style="align-self:flex-start;">Load JSON Markers</button>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+      <div style="flex:1;">
+        <div style="font-size:10px;color:#475569;margin-bottom:4px;text-transform:uppercase;font-weight:700;">Zoom Level</div>
+        <input class="rp-input" type="number" id="map-zoom" value="13" min="1" max="18">
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="btn-xs" style="background:#7c3aed;color:#fff;padding:6px 12px;" id="btn-apply-map-config">Apply Center</button>
+        <button class="btn-xs" style="background:#059669;color:#fff;padding:6px 12px;margin-left:6px;" id="btn-fit-markers">Fit to Markers</button>
+      </div>
+    </div>
+    <!-- Marker list -->
+    <div id="marker-list" style="max-height:180px;overflow-y:auto;border:1px solid #0f172a;border-radius:7px;padding:8px;background:#0f172a;flex-shrink:0;"></div>
+    <!-- Add marker -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;flex-shrink:0;">
+      <input class="rp-input" id="new-marker-name" placeholder="Name">
+      <input class="rp-input" id="new-marker-desc" placeholder="Description">
+      <input class="rp-input" id="new-marker-icon" placeholder="Icon URL (opt.)">
+      <button class="btn-xs" style="background:#059669;color:#fff;" id="btn-add-marker">+Add</button>
+    </div>
+    <!-- JSON loader -->
+    <div style="flex-shrink:0;">
+      <div style="font-size:10px;color:#475569;margin-bottom:4px;text-transform:uppercase;font-weight:700;">Bulk Load via JSON</div>
+      <textarea class="rp-input" id="marker-json" rows="2" placeholder='[{"name":"HQ","lat":22.57,"lng":88.36,"description":"Our office","icon":""}]' style="resize:vertical;font-size:11px;"></textarea>
+    </div>
+    <button class="tb-btn tb-primary" id="btn-load-marker-json" style="align-self:flex-start;flex-shrink:0;">Load JSON Markers</button>
+  </div>
+</div>
+
+<!-- ══════════════ IMAGE UPLOAD MODAL ══════════════ -->
+<div id="img-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <span class="modal-title">🖼 Image Settings</span>
+      <button class="modal-close" id="btn-close-img-modal">✕</button>
+    </div>
+    <div>
+      <div class="rp-label">Image URL</div>
+      <input class="rp-input" id="img-url-input" placeholder="https://…/image.jpg">
+    </div>
+    <div style="text-align:center;color:#475569;font-size:12px;">— or —</div>
+    <div>
+      <div class="rp-label">Upload Image</div>
+      <input type="file" id="img-file-input" accept="image/*" class="rp-input" style="padding:4px;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div><div class="rp-label">Width</div><input class="rp-input" id="img-width" value="100%" placeholder="100%"></div>
+      <div><div class="rp-label">Radius</div><input class="rp-input" id="img-radius" value="0px" placeholder="0px"></div>
+      <div><div class="rp-label">Align</div>
+        <select class="rp-input" id="img-align">
+          <option value="left">Left</option>
+          <option value="center" selected>Center</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+    </div>
+    <div><div class="rp-label">Alt Text</div><input class="rp-input" id="img-alt" value="Image"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="tb-btn tb-primary" id="btn-apply-img">Apply Image</button>
+      <div id="img-preview" style="display:none;max-height:80px;border-radius:6px;overflow:hidden;"></div>
+    </div>
   </div>
 </div>
 
 <script>
-// ============================================================
-//  STATE
-// ============================================================
+/* ══════════════════════════════════════════════════════
+   STATE MODEL — fully state-driven, no DOM scraping
+══════════════════════════════════════════════════════ */
 const State = {
-  blocks: [],          // [{id, name, html}]
+  blocks: [],        // Block[]  { id, type, compId, catKey, name, content:{}, styles:{}, settings:{}, mapData:{} }
   undoStack: [],
   redoStack: [],
   selectedBlockId: null,
   deviceMode: 'desktop',
   gridOn: false,
-  mapInstances: {},   // mapId -> {map, markers:[]}
+  mapInstances: {},  // blockId -> { map, leafletMarkers:[] }
   activeMapId: null,
   lastCoords: null,
+  theme: {
+    primary:'#2563eb', secondary:'#7c3aed', bg:'#ffffff',
+    text:'#111827', accent:'#f59e0b',
+    font:"'DM Sans',sans-serif", radius:'12px'
+  },
+  seo: { title:'My Website', desc:'', og:'' },
+  activeRpTab: 'style',
+  imgModalTarget: null,  // blockId being edited
 };
 
-// ============================================================
-//  COMPONENT TEMPLATES
-// ============================================================
+/* ══════════════════════════════════════════════════════
+   COMPONENT DEFINITIONS  — isMap, isGallery, isRichText, isTable, isImage flags
+══════════════════════════════════════════════════════ */
 const COMPONENTS = {
-  navigation: {
-    label: 'Navigation',
-    icon: '≡',
-    items: [
-      {
-        id: 'nav-simple',
-        label: 'Simple Navbar',
-        html: () => `<nav style="background:var(--primary);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
-  <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-1px;" contenteditable>PageForge</div>
+  navigation:{label:'Navigation',icon:'≡',items:[
+    {id:'nav-simple',label:'Simple Navbar',tpl:(b)=>`<nav data-block-nav style="background:var(--primary);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
+  <div data-logo style="font-size:22px;font-weight:800;color:#fff;" contenteditable>PageForge</div>
   <div style="display:flex;gap:24px;">
-    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">Home</a>
-    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">About</a>
-    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">Services</a>
-    <a href="#" contenteditable style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;">Contact</a>
+    <a href="#" data-nav-link style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Home</a>
+    <a href="#" data-nav-link style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;" contenteditable>About</a>
+    <a href="#" data-nav-link style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Services</a>
+    <a href="#" data-nav-link style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Contact</a>
   </div>
-</nav>`
-      },
-      {
-        id: 'nav-centered',
-        label: 'Centered Navbar',
-        html: () => `<nav style="background:#fff;padding:16px 32px;border-bottom:1px solid #e5e7eb;text-align:center;font-family:var(--font);">
-  <div style="font-size:24px;font-weight:800;color:var(--primary);margin-bottom:10px;" contenteditable>BrandName</div>
+</nav>`},
+    {id:'nav-centered',label:'Centered Navbar',tpl:(b)=>`<nav data-block-nav style="background:#fff;padding:16px 32px;border-bottom:1px solid #e5e7eb;text-align:center;font-family:var(--font);">
+  <div data-logo style="font-size:24px;font-weight:800;color:var(--primary);margin-bottom:10px;" contenteditable>BrandName</div>
   <div style="display:flex;gap:28px;justify-content:center;">
-    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Home</a>
-    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">About</a>
-    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Work</a>
-    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Blog</a>
-    <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Contact</a>
+    <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Home</a>
+    <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>About</a>
+    <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Work</a>
+    <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Blog</a>
+    <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Contact</a>
   </div>
-</nav>`
-      },
-      {
-        id: 'nav-left',
-        label: 'Left-aligned Navbar',
-        html: () => `<nav style="background:#0f172a;padding:14px 32px;display:flex;align-items:center;gap:40px;font-family:var(--font);">
-  <div style="font-size:20px;font-weight:800;color:#fff;" contenteditable>⚡ Brand</div>
+</nav>`},
+    {id:'nav-left',label:'Left-aligned Navbar',tpl:(b)=>`<nav data-block-nav style="background:#0f172a;padding:14px 32px;display:flex;align-items:center;gap:36px;font-family:var(--font);">
+  <div data-logo style="font-size:20px;font-weight:800;color:#fff;" contenteditable>⚡ Brand</div>
   <div style="display:flex;gap:20px;flex:1;">
-    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Home</a>
-    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Product</a>
-    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Pricing</a>
-    <a href="#" contenteditable style="color:#94a3b8;text-decoration:none;font-size:14px;">Docs</a>
+    <a href="#" data-nav-link style="color:#94a3b8;text-decoration:none;font-size:14px;" contenteditable>Home</a>
+    <a href="#" data-nav-link style="color:#94a3b8;text-decoration:none;font-size:14px;" contenteditable>Product</a>
+    <a href="#" data-nav-link style="color:#94a3b8;text-decoration:none;font-size:14px;" contenteditable>Pricing</a>
+    <a href="#" data-nav-link style="color:#94a3b8;text-decoration:none;font-size:14px;" contenteditable>Docs</a>
   </div>
   <button style="background:var(--primary);color:#fff;border:none;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;" contenteditable>Get Started</button>
-</nav>`
-      },
-      {
-        id: 'nav-right',
-        label: 'Right-aligned Navbar',
-        html: () => `<nav style="background:#fff;padding:14px 32px;display:flex;align-items:center;justify-content:flex-end;gap:24px;border-bottom:2px solid var(--primary);font-family:var(--font);">
-  <span style="margin-right:auto;font-size:20px;font-weight:800;color:var(--primary);" contenteditable>🌿 Leaf</span>
-  <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Features</a>
-  <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Pricing</a>
-  <a href="#" contenteditable style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;">Team</a>
+</nav>`},
+    {id:'nav-right',label:'Right-aligned Navbar',tpl:(b)=>`<nav data-block-nav style="background:#fff;padding:14px 32px;display:flex;align-items:center;justify-content:flex-end;gap:24px;border-bottom:2px solid var(--primary);font-family:var(--font);">
+  <span data-logo style="margin-right:auto;font-size:20px;font-weight:800;color:var(--primary);" contenteditable>🌿 Leaf</span>
+  <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Features</a>
+  <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Pricing</a>
+  <a href="#" data-nav-link style="color:#374151;text-decoration:none;font-size:14px;font-weight:500;" contenteditable>Team</a>
   <button style="background:transparent;border:2px solid var(--primary);color:var(--primary);padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;" contenteditable>Login</button>
   <button style="background:var(--primary);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;" contenteditable>Sign Up</button>
-</nav>`
-      },
-      {
-        id: 'nav-transparent',
-        label: 'Transparent Overlay Nav',
-        html: () => `<nav style="background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,transparent 100%);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
-  <div style="font-size:22px;font-weight:800;color:#fff;" contenteditable>✦ Studio</div>
-  <div style="display:flex;gap:28px;">
-    <a href="#" contenteditable style="color:rgba(255,255,255,.9);text-decoration:none;font-size:14px;font-weight:500;">Work</a>
-    <a href="#" contenteditable style="color:rgba(255,255,255,.9);text-decoration:none;font-size:14px;font-weight:500;">About</a>
-    <a href="#" contenteditable style="color:rgba(255,255,255,.9);text-decoration:none;font-size:14px;font-weight:500;">Journal</a>
-    <a href="#" style="color:#fff;text-decoration:none;font-size:14px;font-weight:700;border-bottom:2px solid #fff;padding-bottom:2px;" contenteditable>Contact</a>
+</nav>`},
+    {id:'nav-sticky',label:'Sticky Dark Navbar',tpl:(b)=>`<nav data-block-nav style="position:sticky;top:0;z-index:100;background:rgba(15,23,42,.95);backdrop-filter:blur(12px);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);border-bottom:1px solid rgba(255,255,255,.08);">
+  <div data-logo style="font-size:20px;font-weight:800;color:#fff;" contenteditable>✦ Studio</div>
+  <div style="display:flex;gap:24px;">
+    <a href="#" data-nav-link style="color:#94a3b8;text-decoration:none;font-size:14px;" contenteditable>Work</a>
+    <a href="#" data-nav-link style="color:#94a3b8;text-decoration:none;font-size:14px;" contenteditable>About</a>
+    <a href="#" data-nav-link style="color:#94a3b8;text-decoration:none;font-size:14px;" contenteditable>Journal</a>
+    <a href="#" data-nav-link style="color:#fff;text-decoration:none;font-size:14px;font-weight:700;border-bottom:2px solid var(--primary);padding-bottom:2px;" contenteditable>Contact</a>
   </div>
-</nav>`
-      },
-    ]
-  },
-  content: {
-    label: 'Content',
-    icon: '◧',
-    items: [
-      {
-        id: 'hero-basic',
-        label: 'Hero Section',
-        html: () => `<section style="background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);padding:100px 40px;text-align:center;font-family:var(--font);">
+</nav>`},
+  ]},
+  content:{label:'Content',icon:'◧',items:[
+    {id:'hero-gradient',label:'Hero — Gradient',tpl:(b)=>`<section style="background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);padding:100px 40px;text-align:center;font-family:var(--font);">
   <h1 style="font-size:56px;font-weight:800;color:#fff;margin:0 0 16px;line-height:1.1;" contenteditable>Build Something Amazing</h1>
-  <p style="font-size:20px;color:rgba(255,255,255,.85);max-width:560px;margin:0 auto 36px;line-height:1.6;" contenteditable>Create beautiful websites without writing a single line of code. Drag, drop, and launch.</p>
+  <p style="font-size:20px;color:rgba(255,255,255,.85);max-width:560px;margin:0 auto 36px;line-height:1.6;" contenteditable>Create beautiful websites without writing a single line of code.</p>
   <div style="display:flex;gap:14px;justify-content:center;">
     <button style="background:#fff;color:var(--primary);border:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;" contenteditable>Get Started Free</button>
     <button style="background:transparent;border:2px solid rgba(255,255,255,.6);color:#fff;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" contenteditable>Watch Demo</button>
   </div>
-</section>`
-      },
-      {
-        id: 'hero-dark',
-        label: 'Dark Hero',
-        html: () => `<section style="background:#0f172a;padding:100px 40px;text-align:center;font-family:var(--font);">
+</section>`},
+    {id:'hero-dark',label:'Hero — Dark',tpl:(b)=>`<section style="background:#0f172a;padding:100px 40px;text-align:center;font-family:var(--font);">
   <div style="display:inline-block;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#60a5fa;padding:6px 16px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:24px;" contenteditable>✦ NOW IN BETA</div>
   <h1 style="font-size:60px;font-weight:900;color:#f8fafc;margin:0 0 20px;line-height:1.05;" contenteditable>The Future of<br><span style="color:#3b82f6;">Web Building</span></h1>
-  <p style="font-size:18px;color:#64748b;max-width:500px;margin:0 auto 40px;line-height:1.7;" contenteditable>Powerful tools, zero complexity. Ship your next project in hours.</p>
+  <p style="font-size:18px;color:#64748b;max-width:500px;margin:0 auto 40px;line-height:1.7;" contenteditable>Powerful tools, zero complexity.</p>
   <button style="background:var(--primary);color:#fff;border:none;padding:16px 36px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;" contenteditable>Start Building →</button>
-</section>`
-      },
-      {
-        id: 'two-col',
-        label: 'Two Column (Text + Image)',
-        html: () => `<section style="background:#fff;padding:80px 40px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;font-family:var(--font);">
+</section>`},
+    {id:'two-col',label:'Two Column',tpl:(b)=>`<section style="background:#fff;padding:80px 40px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;font-family:var(--font);">
   <div>
     <div style="color:var(--primary);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;" contenteditable>Our Story</div>
     <h2 style="font-size:40px;font-weight:800;color:#0f172a;margin:0 0 18px;line-height:1.2;" contenteditable>We're on a Mission to Change the Web</h2>
-    <p style="font-size:16px;color:#475569;line-height:1.75;margin:0 0 28px;" contenteditable>We believe everyone should be able to create beautiful digital experiences without needing a developer. Our platform makes it easy.</p>
+    <p style="font-size:16px;color:#475569;line-height:1.75;margin:0 0 28px;" contenteditable>We believe everyone should be able to create beautiful digital experiences.</p>
     <button style="background:var(--primary);color:#fff;border:none;padding:12px 26px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Learn More</button>
   </div>
   <div style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);border-radius:16px;height:320px;display:flex;align-items:center;justify-content:center;font-size:64px;">🖼</div>
-</section>`
-      },
-      {
-        id: 'features-3col',
-        label: 'Features 3-Column',
-        html: () => `<section style="background:#f8fafc;padding:80px 40px;font-family:var(--font);">
+</section>`},
+    {id:'features-3col',label:'Features 3-Column',tpl:(b)=>`<section style="background:#f8fafc;padding:80px 40px;font-family:var(--font);">
   <h2 style="text-align:center;font-size:36px;font-weight:800;color:#0f172a;margin:0 0 12px;" contenteditable>Everything You Need</h2>
   <p style="text-align:center;color:#64748b;font-size:16px;margin:0 0 56px;" contenteditable>Powerful features out of the box</p>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:32px;margin-bottom:14px;">⚡</div>
-      <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Lightning Fast</h3>
-      <p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Optimized for speed with lazy loading and edge delivery.</p>
-    </div>
-    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:32px;margin-bottom:14px;">🎨</div>
-      <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Beautiful Design</h3>
-      <p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Professionally designed components that look great on any screen.</p>
-    </div>
-    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:32px;margin-bottom:14px;">🔒</div>
-      <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Secure & Reliable</h3>
-      <p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Enterprise-grade security with 99.9% uptime guarantee.</p>
-    </div>
+    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><div style="font-size:32px;margin-bottom:14px;">⚡</div><h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Lightning Fast</h3><p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Optimized for speed with lazy loading and edge delivery.</p></div>
+    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><div style="font-size:32px;margin-bottom:14px;">🎨</div><h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Beautiful Design</h3><p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Professionally designed components for any screen.</p></div>
+    <div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><div style="font-size:32px;margin-bottom:14px;">🔒</div><h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 10px;" contenteditable>Secure & Reliable</h3><p style="font-size:14px;color:#64748b;line-height:1.7;margin:0;" contenteditable>Enterprise-grade security with 99.9% uptime.</p></div>
   </div>
-</section>`
-      },
-      {
-        id: 'cta-banner',
-        label: 'CTA Banner',
-        html: () => `<section style="background:var(--primary);padding:72px 40px;text-align:center;font-family:var(--font);">
+</section>`},
+    {id:'cta-banner',label:'CTA Banner',tpl:(b)=>`<section style="background:var(--primary);padding:72px 40px;text-align:center;font-family:var(--font);">
   <h2 style="font-size:40px;font-weight:800;color:#fff;margin:0 0 14px;" contenteditable>Ready to get started?</h2>
-  <p style="font-size:18px;color:rgba(255,255,255,.8);margin:0 0 36px;" contenteditable>Join 10,000+ creators who build with PageForge.</p>
+  <p style="font-size:18px;color:rgba(255,255,255,.8);margin:0 0 36px;" contenteditable>Join 10,000+ creators building with PageForge.</p>
   <button style="background:#fff;color:var(--primary);border:none;padding:14px 36px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;" contenteditable>Start Free Trial</button>
-</section>`
-      },
-      {
-        id: 'testimonial',
-        label: 'Testimonial',
-        html: () => `<section style="background:#fff;padding:80px 40px;font-family:var(--font);">
+</section>`},
+    {id:'testimonial',label:'Testimonials',tpl:(b)=>`<section style="background:#fff;padding:80px 40px;font-family:var(--font);">
   <h2 style="text-align:center;font-size:32px;font-weight:800;color:#0f172a;margin:0 0 48px;" contenteditable>What Our Customers Say</h2>
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;max-width:800px;margin:0 auto;">
-    <div style="background:#f8fafc;border-radius:14px;padding:28px;border-left:4px solid var(--primary);">
-      <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 18px;font-style:italic;" contenteditable>"This tool transformed how we build websites. Incredibly intuitive and powerful."</p>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:38px;height:38px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">A</div>
-        <div><div style="font-size:13px;font-weight:700;color:#0f172a;" contenteditable>Alice Johnson</div><div style="font-size:12px;color:#64748b;" contenteditable>CEO, TechStart</div></div>
-      </div>
-    </div>
-    <div style="background:#f8fafc;border-radius:14px;padding:28px;border-left:4px solid var(--secondary);">
-      <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 18px;font-style:italic;" contenteditable>"We cut our development time by 80%. Absolutely worth it."</p>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:38px;height:38px;background:var(--secondary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">B</div>
-        <div><div style="font-size:13px;font-weight:700;color:#0f172a;" contenteditable>Bob Martinez</div><div style="font-size:12px;color:#64748b;" contenteditable>Founder, Bloom</div></div>
-      </div>
-    </div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;max-width:820px;margin:0 auto;">
+    <div style="background:#f8fafc;border-radius:14px;padding:28px;border-left:4px solid var(--primary);"><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 18px;font-style:italic;" contenteditable>"This tool transformed how we build websites. Incredibly intuitive and powerful."</p><div style="display:flex;align-items:center;gap:10px;"><div style="width:38px;height:38px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">A</div><div><div style="font-size:13px;font-weight:700;color:#0f172a;" contenteditable>Alice Johnson</div><div style="font-size:12px;color:#64748b;" contenteditable>CEO, TechStart</div></div></div></div>
+    <div style="background:#f8fafc;border-radius:14px;padding:28px;border-left:4px solid var(--secondary);"><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 18px;font-style:italic;" contenteditable>"We cut our development time by 80%. Absolutely worth it."</p><div style="display:flex;align-items:center;gap:10px;"><div style="width:38px;height:38px;background:var(--secondary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">B</div><div><div style="font-size:13px;font-weight:700;color:#0f172a;" contenteditable>Bob Martinez</div><div style="font-size:12px;color:#64748b;" contenteditable>Founder, Bloom</div></div></div></div>
   </div>
-</section>`
-      },
-    ]
-  },
-  footer: {
-    label: 'Footer',
-    icon: '▬',
-    items: [
-      {
-        id: 'footer-simple',
-        label: 'Simple Footer',
-        html: () => `<footer style="background:#0f172a;padding:32px 40px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
+</section>`},
+    {id:'pricing',label:'Pricing Cards',tpl:(b)=>`<section style="background:#f8fafc;padding:80px 40px;font-family:var(--font);">
+  <h2 style="text-align:center;font-size:36px;font-weight:800;color:#0f172a;margin:0 0 12px;" contenteditable>Simple Pricing</h2>
+  <p style="text-align:center;color:#64748b;margin:0 0 52px;" contenteditable>No hidden fees. Cancel anytime.</p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:900px;margin:0 auto;">
+    <div style="background:#fff;border-radius:14px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px;" contenteditable>STARTER</div><div style="font-size:40px;font-weight:900;color:#0f172a;margin-bottom:4px;" contenteditable>$0</div><div style="font-size:13px;color:#94a3b8;margin-bottom:24px;" contenteditable>/month</div><button style="width:100%;background:#f1f5f9;color:#0f172a;border:none;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;" contenteditable>Get Started</button></div>
+    <div style="background:var(--primary);border-radius:14px;padding:32px;box-shadow:0 8px 24px rgba(37,99,235,.3);"><div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.7);margin-bottom:10px;" contenteditable>PRO</div><div style="font-size:40px;font-weight:900;color:#fff;margin-bottom:4px;" contenteditable>$29</div><div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:24px;" contenteditable>/month</div><button style="width:100%;background:#fff;color:var(--primary);border:none;padding:11px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Start Free Trial</button></div>
+    <div style="background:#fff;border-radius:14px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px;" contenteditable>ENTERPRISE</div><div style="font-size:40px;font-weight:900;color:#0f172a;margin-bottom:4px;" contenteditable>$99</div><div style="font-size:13px;color:#94a3b8;margin-bottom:24px;" contenteditable>/month</div><button style="width:100%;background:#f1f5f9;color:#0f172a;border:none;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;" contenteditable>Contact Sales</button></div>
+  </div>
+</section>`},
+  ]},
+  media:{label:'Media & Content',icon:'🖼',items:[
+    {id:'image-block',label:'Image Block',isImage:true,tpl:(b)=>`<div data-image-block style="padding:40px;text-align:center;background:#fff;font-family:var(--font);">
+  <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80" alt="Image" style="max-width:100%;border-radius:12px;height:auto;display:inline-block;">
+  <p style="font-size:13px;color:#94a3b8;margin-top:10px;" contenteditable>Image caption</p>
+</div>`},
+    {id:'richtext-block',label:'Rich Text Block',isRichText:true,tpl:(b)=>`<div data-richtext style="padding:48px 60px;background:#fff;font-family:var(--font);max-width:720px;margin:0 auto;">
+  <h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 18px;line-height:1.25;" contenteditable>Write Your Story</h2>
+  <p style="font-size:16px;color:#374151;line-height:1.8;margin:0 0 16px;" contenteditable>This is a rich text block. Click any text to edit it inline. Use the toolbar above to apply bold, italic, headings, and lists to your content.</p>
+  <p style="font-size:16px;color:#374151;line-height:1.8;margin:0;" contenteditable>Add as many paragraphs as you need. The block grows with your content automatically.</p>
+</div>`},
+    {id:'table-block',label:'Data Table',isTable:true,tpl:(b)=>`<div data-table-wrap style="padding:40px;background:#fff;font-family:var(--font);overflow-x:auto;">
+  <h3 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 20px;" contenteditable>Data Table</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;" data-table>
+    <thead><tr style="background:var(--primary);">
+      <th class="table-editor-cell" contenteditable style="color:#fff;text-align:left;">Name</th>
+      <th class="table-editor-cell" contenteditable style="color:#fff;text-align:left;">Role</th>
+      <th class="table-editor-cell" contenteditable style="color:#fff;text-align:left;">Status</th>
+      <th class="table-editor-cell" contenteditable style="color:#fff;text-align:left;">Joined</th>
+    </tr></thead>
+    <tbody>
+      <tr style="background:#fff;"><td class="table-editor-cell" contenteditable>Alice Johnson</td><td class="table-editor-cell" contenteditable>Designer</td><td class="table-editor-cell" contenteditable>Active</td><td class="table-editor-cell" contenteditable>2023</td></tr>
+      <tr style="background:#f8fafc;"><td class="table-editor-cell" contenteditable>Bob Martinez</td><td class="table-editor-cell" contenteditable>Engineer</td><td class="table-editor-cell" contenteditable>Active</td><td class="table-editor-cell" contenteditable>2022</td></tr>
+      <tr style="background:#fff;"><td class="table-editor-cell" contenteditable>Carol Smith</td><td class="table-editor-cell" contenteditable>Manager</td><td class="table-editor-cell" contenteditable>Away</td><td class="table-editor-cell" contenteditable>2021</td></tr>
+    </tbody>
+  </table>
+</div>`},
+    {id:'gallery-slider',label:'Gallery Slider',isGallery:true,tpl:(b)=>`<div data-gallery style="background:#0f172a;padding:60px 40px;font-family:var(--font);">
+  <h2 style="text-align:center;font-size:32px;font-weight:800;color:#fff;margin:0 0 32px;" contenteditable>Our Gallery</h2>
+  <div data-gallery-inner style="position:relative;max-width:800px;margin:0 auto;">
+    <div class="gallery-slide active" data-slide><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80" style="width:100%;border-radius:12px;height:400px;object-fit:cover;"><div style="text-align:center;padding:16px 0;color:#94a3b8;font-size:14px;" contenteditable>Mountain landscape at sunrise</div></div>
+    <div class="gallery-slide" data-slide><img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&q=80" style="width:100%;border-radius:12px;height:400px;object-fit:cover;"><div style="text-align:center;padding:16px 0;color:#94a3b8;font-size:14px;" contenteditable>Forest path in autumn</div></div>
+    <div class="gallery-slide" data-slide><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80" style="width:100%;border-radius:12px;height:400px;object-fit:cover;"><div style="text-align:center;padding:16px 0;color:#94a3b8;font-size:14px;" contenteditable>Tropical beach paradise</div></div>
+    <button class="gallery-nav-btn" style="left:12px;" data-gallery-prev>‹</button>
+    <button class="gallery-nav-btn" style="right:12px;" data-gallery-next>›</button>
+  </div>
+  <div style="text-align:center;margin-top:16px;" data-gallery-dots></div>
+</div>`},
+  ]},
+  footer:{label:'Footer',icon:'▬',items:[
+    {id:'footer-simple',label:'Simple Footer',tpl:(b)=>`<footer style="background:#0f172a;padding:32px 40px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font);">
   <span style="font-size:18px;font-weight:700;color:#fff;" contenteditable>PageForge</span>
   <span style="font-size:13px;color:#475569;" contenteditable>© 2025 PageForge. All rights reserved.</span>
   <div style="display:flex;gap:16px;">
-    <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Privacy</a>
-    <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Terms</a>
-    <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Contact</a>
+    <a href="#" data-nav-link style="color:#475569;text-decoration:none;font-size:13px;" contenteditable>Privacy</a>
+    <a href="#" data-nav-link style="color:#475569;text-decoration:none;font-size:13px;" contenteditable>Terms</a>
+    <a href="#" data-nav-link style="color:#475569;text-decoration:none;font-size:13px;" contenteditable>Contact</a>
   </div>
-</footer>`
-      },
-      {
-        id: 'footer-multi',
-        label: 'Multi-Column Footer',
-        html: () => `<footer style="background:#0f172a;padding:64px 40px 32px;font-family:var(--font);">
-  <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px;">
-    <div>
-      <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:12px;" contenteditable>PageForge</div>
-      <p style="color:#64748b;font-size:14px;line-height:1.7;margin:0 0 20px;" contenteditable>Build beautiful websites without code. Fast, flexible, and powerful.</p>
-    </div>
-    <div>
-      <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;" contenteditable>Product</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Features</a>
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Pricing</a>
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Changelog</a>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;" contenteditable>Company</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">About</a>
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Blog</a>
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Careers</a>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;" contenteditable>Legal</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Privacy</a>
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Terms</a>
-        <a href="#" contenteditable style="color:#64748b;text-decoration:none;font-size:14px;">Cookies</a>
-      </div>
-    </div>
+</footer>`},
+    {id:'footer-multi',label:'Multi-Column Footer',tpl:(b)=>`<footer style="background:#0f172a;padding:60px 40px 28px;font-family:var(--font);">
+  <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:44px;">
+    <div><div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:12px;" contenteditable>PageForge</div><p style="color:#64748b;font-size:14px;line-height:1.7;margin:0;" contenteditable>Build beautiful websites without code. Fast, flexible, and powerful.</p></div>
+    <div><div style="font-size:11px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;" contenteditable>Product</div><div style="display:flex;flex-direction:column;gap:9px;"><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Features</a><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Pricing</a><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Changelog</a></div></div>
+    <div><div style="font-size:11px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;" contenteditable>Company</div><div style="display:flex;flex-direction:column;gap:9px;"><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>About</a><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Blog</a><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Careers</a></div></div>
+    <div><div style="font-size:11px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;" contenteditable>Legal</div><div style="display:flex;flex-direction:column;gap:9px;"><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Privacy</a><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Terms</a><a href="#" data-nav-link style="color:#64748b;text-decoration:none;font-size:14px;" contenteditable>Cookies</a></div></div>
   </div>
-  <div style="border-top:1px solid #1e293b;padding-top:24px;text-align:center;color:#475569;font-size:13px;" contenteditable>© 2025 PageForge, Inc. All rights reserved.</div>
-</footer>`
-      },
-      {
-        id: 'footer-minimal',
-        label: 'Minimal Footer',
-        html: () => `<footer style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;font-family:var(--font);">
-  <span style="font-size:13px;color:#94a3b8;" contenteditable>Made with ❤️ by PageForge — © 2025</span>
-</footer>`
-      },
-      {
-        id: 'footer-dark-cta',
-        label: 'Footer with CTA',
-        html: () => `<footer style="background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);padding:64px 40px;text-align:center;font-family:var(--font);">
+  <div style="border-top:1px solid #1e293b;padding-top:22px;text-align:center;color:#475569;font-size:13px;" contenteditable>© 2025 PageForge, Inc. All rights reserved.</div>
+</footer>`},
+    {id:'footer-minimal',label:'Minimal Footer',tpl:(b)=>`<footer style="background:#f8fafc;padding:22px 40px;text-align:center;border-top:1px solid #e2e8f0;font-family:var(--font);"><span style="font-size:13px;color:#94a3b8;" contenteditable>Made with ❤️ by PageForge — © 2025</span></footer>`},
+    {id:'footer-cta',label:'Footer with CTA',tpl:(b)=>`<footer style="background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);padding:60px 40px;text-align:center;font-family:var(--font);">
   <h3 style="font-size:32px;font-weight:800;color:#fff;margin:0 0 12px;" contenteditable>Start your free trial today</h3>
   <p style="color:#64748b;font-size:15px;margin:0 0 28px;" contenteditable>No credit card required. Cancel anytime.</p>
   <button style="background:var(--primary);color:#fff;border:none;padding:13px 30px;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:40px;" contenteditable>Get Started →</button>
-  <div style="border-top:1px solid #1e293b;padding-top:28px;display:flex;justify-content:space-between;align-items:center;">
+  <div style="border-top:1px solid #1e293b;padding-top:26px;display:flex;justify-content:space-between;align-items:center;">
     <span style="color:#fff;font-weight:700;font-size:16px;" contenteditable>PageForge</span>
     <span style="color:#475569;font-size:13px;" contenteditable>© 2025 All rights reserved</span>
-    <div style="display:flex;gap:14px;">
-      <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">Twitter</a>
-      <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">LinkedIn</a>
-      <a href="#" contenteditable style="color:#475569;text-decoration:none;font-size:13px;">GitHub</a>
-    </div>
+    <div style="display:flex;gap:14px;"><a href="#" data-nav-link style="color:#475569;text-decoration:none;font-size:13px;" contenteditable>Twitter</a><a href="#" data-nav-link style="color:#475569;text-decoration:none;font-size:13px;" contenteditable>LinkedIn</a></div>
   </div>
-</footer>`
-      },
-      {
-        id: 'footer-newsletter',
-        label: 'Footer with Newsletter',
-        html: () => `<footer style="background:#0f172a;padding:60px 40px;font-family:var(--font);">
-  <div style="text-align:center;margin-bottom:48px;">
+</footer>`},
+    {id:'footer-newsletter',label:'Footer + Newsletter',tpl:(b)=>`<footer style="background:#0f172a;padding:56px 40px;font-family:var(--font);">
+  <div style="text-align:center;margin-bottom:44px;">
     <h3 style="font-size:26px;font-weight:700;color:#fff;margin:0 0 10px;" contenteditable>Stay in the loop</h3>
     <p style="color:#64748b;font-size:14px;margin:0 0 20px;" contenteditable>Subscribe for product updates and news.</p>
     <div style="display:flex;gap:10px;justify-content:center;max-width:400px;margin:0 auto;">
@@ -556,792 +577,1273 @@ const COMPONENTS = {
       <button style="background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Subscribe</button>
     </div>
   </div>
-  <div style="border-top:1px solid #1e293b;padding-top:24px;text-align:center;color:#475569;font-size:13px;" contenteditable>© 2025 PageForge</div>
-</footer>`
-      },
-    ]
-  },
-  maps: {
-    label: 'Maps',
-    icon: '🗺',
-    items: [
-      {
-        id: 'map-basic',
-        label: 'Basic Map Section',
-        isMap: true,
-        html: (mapId) => `<section style="font-family:var(--font);background:#fff;">
-  <div style="padding:40px 40px 20px;text-align:center;">
-    <h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 8px;" contenteditable>Find Us Here</h2>
-    <p style="font-size:16px;color:#64748b;margin:0;" contenteditable>We're located in the heart of the city</p>
-  </div>
-  <div id="${mapId}" class="leaflet-map-container" style="height:420px;"></div>
-  <div style="padding:20px 40px 40px;text-align:center;">
-    <p style="font-size:14px;color:#94a3b8;" contenteditable>📍 Click on the map to add markers and explore locations</p>
-  </div>
-</section>`
-      },
-      {
-        id: 'map-cards',
-        label: 'Map with Info Cards',
-        isMap: true,
-        html: (mapId) => `<section style="font-family:var(--font);background:#f8fafc;padding:60px 40px;">
+  <div style="border-top:1px solid #1e293b;padding-top:22px;text-align:center;color:#475569;font-size:13px;" contenteditable>© 2025 PageForge</div>
+</footer>`},
+  ]},
+  maps:{label:'Maps',icon:'🗺',items:[
+    {id:'map-basic',label:'Basic Map',isMap:true,tpl:(b)=>{const mid=mapUid();return`<section data-map-block style="font-family:var(--font);background:#fff;">
+  <div style="padding:40px 40px 20px;text-align:center;"><h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 8px;" contenteditable>Find Us Here</h2><p style="font-size:16px;color:#64748b;margin:0;" contenteditable>We're located in the heart of the city</p></div>
+  <div id="${mid}" class="leaflet-map-container" style="height:420px;"></div>
+  <div style="padding:16px 40px 36px;text-align:center;"><p style="font-size:13px;color:#94a3b8;" contenteditable>📍 Click the map icon in settings to add markers</p></div>
+</section>`}},
+    {id:'map-cards',label:'Map + Info Cards',isMap:true,tpl:(b)=>{const mid=mapUid();return`<section data-map-block style="font-family:var(--font);background:#f8fafc;padding:60px 40px;">
   <h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 8px;text-align:center;" contenteditable>Our Locations</h2>
   <p style="text-align:center;color:#64748b;margin:0 0 36px;" contenteditable>Visit us at any of our offices worldwide</p>
-  <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;max-width:1000px;margin:0 auto;">
-    <div id="${mapId}" class="leaflet-map-container" style="height:400px;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);"></div>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;max-width:960px;margin:0 auto;">
+    <div id="${mid}" class="leaflet-map-container" style="height:400px;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);"></div>
     <div style="display:flex;flex-direction:column;gap:14px;">
-      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🏢</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Headquarters</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>123 Main Street, Kolkata, WB 700001</p></div>
-      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🌏</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Asia Office</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>456 Tech Park, Mumbai, MH 400001</p></div>
-      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🌍</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Europe Office</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>789 Innovation Hub, Berlin, 10115</p></div>
+      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🏢</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Headquarters</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>123 Main Street, Kolkata</p></div>
+      <div class="map-info-card"><div style="font-size:20px;margin-bottom:6px;">🌍</div><h4 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;" contenteditable>Europe Office</h4><p style="margin:0;font-size:13px;color:#64748b;" contenteditable>789 Innovation Hub, Berlin</p></div>
     </div>
   </div>
-</section>`
-      },
-      {
-        id: 'map-full',
-        label: 'Full-Width Map',
-        isMap: true,
-        html: (mapId) => `<section style="font-family:var(--font);">
-  <div id="${mapId}" class="leaflet-map-container" style="height:500px;"></div>
-</section>`
-      },
-      {
-        id: 'map-events',
-        label: 'Event Map Section',
-        isMap: true,
-        html: (mapId) => `<section style="font-family:var(--font);background:linear-gradient(135deg,#0f172a,#1e1b4b);padding:60px 40px;">
-  <div style="text-align:center;margin-bottom:36px;">
-    <div style="display:inline-block;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);color:#a78bfa;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:16px;" contenteditable>📅 UPCOMING EVENT</div>
-    <h2 style="font-size:36px;font-weight:800;color:#fff;margin:0 0 10px;" contenteditable>PageForge Summit 2025</h2>
-    <p style="color:#64748b;font-size:15px;" contenteditable>Join us at our annual conference. See the exact venue on the map below.</p>
-  </div>
-  <div id="${mapId}" class="leaflet-map-container" style="height:380px;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4);"></div>
-</section>`
-      },
-      {
-        id: 'map-store-locator',
-        label: 'Store Locator',
-        isMap: true,
-        html: (mapId) => `<section style="font-family:var(--font);background:#fff;padding:60px 40px;">
+</section>`}},
+    {id:'map-full',label:'Full-Width Map',isMap:true,tpl:(b)=>{const mid=mapUid();return`<section data-map-block style="font-family:var(--font);"><div id="${mid}" class="leaflet-map-container" style="height:500px;"></div></section>`}},
+    {id:'map-events',label:'Event Map',isMap:true,tpl:(b)=>{const mid=mapUid();return`<section data-map-block style="font-family:var(--font);background:linear-gradient(135deg,#0f172a,#1e1b4b);padding:60px 40px;">
+  <div style="text-align:center;margin-bottom:36px;"><div style="display:inline-block;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);color:#a78bfa;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:16px;" contenteditable>📅 UPCOMING EVENT</div>
+  <h2 style="font-size:36px;font-weight:800;color:#fff;margin:0 0 10px;" contenteditable>PageForge Summit 2025</h2>
+  <p style="color:#64748b;font-size:15px;" contenteditable>Join us at our annual conference.</p></div>
+  <div id="${mid}" class="leaflet-map-container" style="height:380px;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4);"></div>
+</section>`}},
+    {id:'map-store',label:'Store Locator',isMap:true,tpl:(b)=>{const mid=mapUid();return`<section data-map-block style="font-family:var(--font);background:#fff;padding:60px 40px;">
   <h2 style="font-size:32px;font-weight:800;color:#0f172a;margin:0 0 8px;text-align:center;" contenteditable>Store Locator</h2>
-  <p style="text-align:center;color:#64748b;margin:0 0 28px;" contenteditable>Find the nearest store to you</p>
-  <div style="display:flex;gap:12px;max-width:500px;margin:0 auto 32px;">
-    <input style="flex:1;background:#f1f5f9;border:1px solid #e2e8f0;color:#0f172a;padding:11px 16px;border-radius:9px;font-size:14px;outline:none;" placeholder="Enter your city or pincode…">
-    <button style="background:var(--primary);color:#fff;border:none;padding:11px 22px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Search</button>
-  </div>
-  <div id="${mapId}" class="leaflet-map-container" style="height:420px;border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);"></div>
-</section>`
-      },
-    ]
-  }
+  <div style="display:flex;gap:12px;max-width:480px;margin:0 auto 32px;"><input style="flex:1;background:#f1f5f9;border:1px solid #e2e8f0;color:#0f172a;padding:10px 16px;border-radius:9px;font-size:14px;outline:none;" placeholder="Enter city or pincode…"><button style="background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;" contenteditable>Search</button></div>
+  <div id="${mid}" class="leaflet-map-container" style="height:420px;border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);"></div>
+</section>`}},
+  ]}
 };
 
-// ============================================================
-//  UTILS
-// ============================================================
-function uid() { return 'b' + Math.random().toString(36).slice(2,9); }
-function mapUid() { return 'map_' + Math.random().toString(36).slice(2,9); }
+/* ══════════════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════════════ */
+function uid(){ return 'b'+Math.random().toString(36).slice(2,9); }
+function mapUid(){ return 'map_'+Math.random().toString(36).slice(2,9); }
 
-function showToast(msg, color='#059669') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = color;
+function showToast(msg,color='#059669'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=color;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-function escapeHtml(h) {
-  return h.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function updateCompCount(){
+  document.getElementById('comp-count').textContent=
+    State.blocks.length+' component'+(State.blocks.length!==1?'s':'');
 }
 
-function updateCompCount() {
-  document.getElementById('comp-count').textContent = State.blocks.length + ' component' + (State.blocks.length !== 1 ? 's' : '');
-}
-
-// ============================================================
-//  SIDEBAR BUILDER
-// ============================================================
-function buildSidebar(filter='') {
-  const list = document.getElementById('comp-list');
-  list.innerHTML = '';
-  for (const [catKey, cat] of Object.entries(COMPONENTS)) {
-    const filteredItems = cat.items.filter(item => !filter || item.label.toLowerCase().includes(filter.toLowerCase()));
-    if (!filteredItems.length) continue;
-    const catEl = document.createElement('div');
-    catEl.innerHTML = `<div class="sidebar-cat">${cat.label}</div>`;
-    filteredItems.forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'comp-item';
-      div.dataset.compId = item.id;
-      div.dataset.catKey = catKey;
-      div.innerHTML = `<span class="icon">${cat.icon}</span>${item.label}`;
-      div.setAttribute('draggable', true);
-      div.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('compId', item.id);
-        e.dataTransfer.setData('catKey', catKey);
+/* ══════════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════════ */
+function buildSidebar(filter=''){
+  const list=document.getElementById('comp-list');
+  list.innerHTML='';
+  for(const[catKey,cat] of Object.entries(COMPONENTS)){
+    const filtered=cat.items.filter(i=>!filter||i.label.toLowerCase().includes(filter.toLowerCase()));
+    if(!filtered.length) continue;
+    const wrap=document.createElement('div');
+    wrap.innerHTML=`<div class="sidebar-cat">${cat.label}</div>`;
+    filtered.forEach(item=>{
+      const div=document.createElement('div');
+      div.className='comp-item';
+      div.setAttribute('draggable',true);
+      div.innerHTML=`<span class="ci-icon">${cat.icon}</span>${item.label}`;
+      div.addEventListener('dragstart',e=>{
+        e.dataTransfer.setData('compId',item.id);
+        e.dataTransfer.setData('catKey',catKey);
       });
-      catEl.appendChild(div);
+      wrap.appendChild(div);
     });
-    list.appendChild(catEl);
+    list.appendChild(wrap);
   }
 }
-
-document.getElementById('comp-search').addEventListener('input', e => buildSidebar(e.target.value));
+document.getElementById('comp-search').addEventListener('input',e=>buildSidebar(e.target.value));
 buildSidebar();
 
-// ============================================================
-//  CANVAS DRAG & DROP (Native + SortableJS)
-// ============================================================
-const canvas = document.getElementById('canvas');
-const canvasEmpty = document.getElementById('canvas-empty');
+/* ══════════════════════════════════════════════════════
+   CANVAS DRAG & DROP
+══════════════════════════════════════════════════════ */
+const canvas=document.getElementById('canvas');
+const canvasEmpty=document.getElementById('canvas-empty');
 
-canvas.addEventListener('dragover', e => { e.preventDefault(); canvas.style.outline = '2px dashed #3b82f6'; });
-canvas.addEventListener('dragleave', () => { canvas.style.outline = ''; });
-canvas.addEventListener('drop', e => {
-  e.preventDefault();
-  canvas.style.outline = '';
-  const compId = e.dataTransfer.getData('compId');
-  const catKey = e.dataTransfer.getData('catKey');
-  if (compId && catKey) addBlock(compId, catKey);
+canvas.addEventListener('dragover',e=>{ e.preventDefault(); canvas.style.outline='2px dashed #3b82f6'; });
+canvas.addEventListener('dragleave',()=>canvas.style.outline='');
+canvas.addEventListener('drop',e=>{
+  e.preventDefault(); canvas.style.outline='';
+  const compId=e.dataTransfer.getData('compId');
+  const catKey=e.dataTransfer.getData('catKey');
+  if(compId&&catKey) addBlock(compId,catKey);
 });
 
-const sortable = Sortable.create(canvas, {
-  animation: 150,
-  handle: '.bc-drag-handle',
-  ghostClass: 'sortable-ghost',
-  dragClass: 'sortable-drag',
-  onEnd: () => syncBlocksFromDOM(),
-});
-
-function syncBlocksFromDOM() {
-  const ids = [...canvas.querySelectorAll('.canvas-block')].map(el => el.dataset.blockId);
-  State.blocks.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
-}
-
-// ============================================================
-//  BLOCK MANAGEMENT
-// ============================================================
-function addBlock(compId, catKey, insertHtml = null, blockId = null) {
-  saveUndo();
-  const cat = COMPONENTS[catKey];
-  const item = cat.items.find(i => i.id === compId);
-  if (!item) return;
-
-  const id = blockId || uid();
-  const isMap = !!item.isMap;
-  let html;
-
-  if (insertHtml) {
-    html = insertHtml;
-  } else if (isMap) {
-    const mId = mapUid();
-    html = item.html(mId);
-  } else {
-    html = item.html();
+Sortable.create(canvas,{
+  animation:150,
+  handle:'.bc-handle',
+  ghostClass:'sortable-ghost',
+  onEnd:()=>{
+    const ids=[...canvas.querySelectorAll('.canvas-block')].map(el=>el.dataset.blockId);
+    State.blocks.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
   }
+});
 
-  const block = { id, compId, catKey, name: item.label, html, isMap };
+/* ══════════════════════════════════════════════════════
+   BLOCK MANAGEMENT
+══════════════════════════════════════════════════════ */
+function addBlock(compId,catKey,overrideBlock=null){
+  saveUndo();
+  const cat=COMPONENTS[catKey];
+  const item=cat.items.find(i=>i.id===compId);
+  if(!item) return;
+
+  const id=overrideBlock?.id||uid();
+  const html=overrideBlock?.html||item.tpl(null);
+
+  const block={
+    id, compId, catKey,
+    name:item.label,
+    html,
+    isMap:!!item.isMap,
+    isGallery:!!item.isGallery,
+    isRichText:!!item.isRichText,
+    isTable:!!item.isTable,
+    isImage:!!item.isImage,
+    styles: overrideBlock?.styles||{},
+    settings: overrideBlock?.settings||{},
+    mapData: overrideBlock?.mapData||{
+      center:[22.5726,88.3639],
+      zoom:13,
+      markers:[]
+    }
+  };
   State.blocks.push(block);
-
-  renderBlock(block);
+  mountBlock(block);
   updateCompCount();
-  canvasEmpty.style.display = 'none';
-
-  if (isMap) {
-    requestAnimationFrame(() => initMapInBlock(id, block));
-  }
+  canvasEmpty.style.display='none';
+  if(block.isMap) requestAnimationFrame(()=>initMap(id));
+  if(block.isGallery) requestAnimationFrame(()=>initGallery(id));
 }
 
-function renderBlock(block) {
-  const existing = canvas.querySelector(`[data-block-id="${block.id}"]`);
-  if (existing) existing.remove();
+function mountBlock(block){
+  const existing=canvas.querySelector(`[data-block-id="${block.id}"]`);
+  if(existing) existing.remove();
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'canvas-block';
-  wrapper.dataset.blockId = block.id;
+  const wrap=document.createElement('div');
+  wrap.className='canvas-block';
+  wrap.dataset.blockId=block.id;
+  applyBlockStyles(wrap,block);
 
-  wrapper.innerHTML = `
+  // Special toolbar for rich text
+  const rteBar=block.isRichText?`
+    <div class="rte-toolbar" style="position:absolute;top:38px;left:6px;z-index:25;display:none;" data-rte-toolbar>
+      <button class="rte-btn" onclick="execFmt('bold')" title="Bold"><b>B</b></button>
+      <button class="rte-btn" onclick="execFmt('italic')" title="Italic"><i>I</i></button>
+      <button class="rte-btn" onclick="execFmt('underline')" title="Underline"><u>U</u></button>
+      <button class="rte-btn" onclick="execFmt('formatBlock','h2')" title="Heading">H2</button>
+      <button class="rte-btn" onclick="execFmt('formatBlock','h3')" title="Heading 3">H3</button>
+      <button class="rte-btn" onclick="execFmt('insertUnorderedList')" title="List">• List</button>
+      <button class="rte-btn" onclick="execFmt('insertOrderedList')" title="Numbered">1. List</button>
+      <button class="rte-btn" onclick="execFmt('removeFormat')" title="Clear">✕ Format</button>
+    </div>`:
+  block.isTable?`
+    <div class="rte-toolbar" style="position:absolute;top:38px;left:6px;z-index:25;display:none;" data-table-toolbar>
+      <button class="rte-btn" onclick="tableAddRow('${block.id}')">+Row</button>
+      <button class="rte-btn" onclick="tableDelRow('${block.id}')">−Row</button>
+      <button class="rte-btn" onclick="tableAddCol('${block.id}')">+Col</button>
+      <button class="rte-btn" onclick="tableDelCol('${block.id}')">−Col</button>
+    </div>`:'';
+
+  wrap.innerHTML=`
     <div class="block-label">${block.name}</div>
+    ${rteBar}
     <div class="block-controls">
-      <button class="block-controls-btn bc-drag-handle" title="Drag to reorder">⠿</button>
-      <button class="block-controls-btn bc-settings" title="Settings" onclick="openSettings('${block.id}')">⚙</button>
-      <button class="block-controls-btn bc-dupe" title="Duplicate" onclick="duplicateBlock('${block.id}')">⧉</button>
-      <button class="block-controls-btn bc-del" title="Delete" onclick="deleteBlock('${block.id}')">✕</button>
+      <button class="bc-btn bc-handle" title="Drag">⠿</button>
+      <button class="bc-btn bc-settings" title="Settings" onclick="openSettings('${block.id}')">⚙</button>
+      ${block.isMap?`<button class="bc-btn" style="background:#0ea5e9;color:#fff;" title="Map Manager" onclick="openMapModal('${block.id}')">📍</button>`:''}
+      ${block.isImage?`<button class="bc-btn" style="background:#f59e0b;color:#fff;" title="Change Image" onclick="openImgModal('${block.id}')">🖼</button>`:''}
+      <button class="bc-btn bc-dupe" title="Duplicate" onclick="duplicateBlock('${block.id}')">⧉</button>
+      <button class="bc-btn bc-del" title="Delete" onclick="deleteBlock('${block.id}')">✕</button>
     </div>
-    <div class="block-content">${block.html}</div>
-  `;
+    <div class="block-content">${block.html}</div>`;
 
-  canvas.appendChild(wrapper);
-  updateCompCount();
-}
+  canvas.appendChild(wrap);
 
-function deleteBlock(id) {
-  saveUndo();
-  State.blocks = State.blocks.filter(b => b.id !== id);
-  const el = canvas.querySelector(`[data-block-id="${id}"]`);
-  if (el) el.remove();
-  if (State.mapInstances[id]) {
-    State.mapInstances[id].map.remove();
-    delete State.mapInstances[id];
+  // Show RTE toolbar on hover
+  if(block.isRichText||block.isTable){
+    const toolbar=wrap.querySelector('[data-rte-toolbar],[data-table-toolbar]');
+    if(toolbar){
+      wrap.addEventListener('mouseenter',()=>toolbar.style.display='flex');
+      wrap.addEventListener('mouseleave',()=>toolbar.style.display='none');
+    }
   }
-  if (State.blocks.length === 0) canvasEmpty.style.display = '';
-  if (State.selectedBlockId === id) closeRightPanel();
-  updateCompCount();
-  showToast('Component deleted', '#ef4444');
 }
 
-function duplicateBlock(id) {
-  saveUndo();
-  const block = State.blocks.find(b => b.id === id);
-  if (!block) return;
-  const newId = uid();
-  let html = canvas.querySelector(`[data-block-id="${id}"] .block-content`).innerHTML;
-  // Replace map ids
-  if (block.isMap) {
-    const mId = mapUid();
-    html = html.replace(/id="map_[a-z0-9]+"/g, `id="${mId}"`);
+function execFmt(cmd,val=null){ document.execCommand(cmd,false,val); }
+
+/* Table helpers */
+function tableAddRow(blockId){
+  const table=canvas.querySelector(`[data-block-id="${blockId}"] [data-table]`);
+  if(!table) return;
+  const cols=table.rows[0].cells.length;
+  const tr=table.insertRow();
+  for(let i=0;i<cols;i++){
+    const td=document.createElement('td');
+    td.className='table-editor-cell';
+    td.contentEditable=true;
+    td.textContent='Cell';
+    tr.appendChild(td);
   }
-  const newBlock = { ...block, id: newId, html };
-  const idx = State.blocks.findIndex(b => b.id === id);
-  State.blocks.splice(idx + 1, 0, newBlock);
-  const existingEl = canvas.querySelector(`[data-block-id="${id}"]`);
-  const wrapper = createBlockWrapper(newBlock);
-  existingEl.insertAdjacentElement('afterend', wrapper);
-  if (newBlock.isMap) requestAnimationFrame(() => initMapInBlock(newId, newBlock));
+  tr.style.background=table.rows.length%2===0?'#f8fafc':'#fff';
+}
+function tableDelRow(blockId){
+  const table=canvas.querySelector(`[data-block-id="${blockId}"] [data-table]`);
+  if(!table||table.rows.length<=2) return;
+  table.deleteRow(table.rows.length-1);
+}
+function tableAddCol(blockId){
+  const table=canvas.querySelector(`[data-block-id="${blockId}"] [data-table]`);
+  if(!table) return;
+  for(let i=0;i<table.rows.length;i++){
+    const cell=i===0?document.createElement('th'):document.createElement('td');
+    cell.className='table-editor-cell';
+    cell.contentEditable=true;
+    cell.textContent=i===0?'Column':'Cell';
+    if(i===0) cell.style.cssText='color:#fff;text-align:left;';
+    table.rows[i].appendChild(cell);
+  }
+}
+function tableDelCol(blockId){
+  const table=canvas.querySelector(`[data-block-id="${blockId}"] [data-table]`);
+  if(!table||!table.rows[0]||table.rows[0].cells.length<=1) return;
+  for(let i=0;i<table.rows.length;i++) table.rows[i].deleteCell(-1);
+}
+
+function applyBlockStyles(wrap,block){
+  const s=block.styles||{};
+  if(s.padding) wrap.style.padding=s.padding;
+  if(s.margin) wrap.style.margin=s.margin;
+  if(s.bgColor) wrap.style.background=s.bgColor;
+  if(s.bgGradient) wrap.style.backgroundImage=s.bgGradient;
+  if(s.borderRadius) wrap.style.borderRadius=s.borderRadius;
+  if(s.shadow) wrap.style.boxShadow=s.shadow;
+  if(s.opacity) wrap.style.opacity=s.opacity;
+  if(s.textAlign){
+    const inner=wrap.querySelector('.block-content>*');
+    if(inner) inner.style.textAlign=s.textAlign;
+  }
+}
+
+function deleteBlock(id){
+  saveUndo();
+  State.blocks=State.blocks.filter(b=>b.id!==id);
+  canvas.querySelector(`[data-block-id="${id}"]`)?.remove();
+  if(State.mapInstances[id]){ State.mapInstances[id].map.remove(); delete State.mapInstances[id]; }
+  if(!State.blocks.length) canvasEmpty.style.display='';
+  if(State.selectedBlockId===id) closeRightPanel();
   updateCompCount();
-  showToast('Component duplicated');
+  showToast('Deleted','#ef4444');
 }
 
-function createBlockWrapper(block) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'canvas-block';
-  wrapper.dataset.blockId = block.id;
-  wrapper.innerHTML = `
-    <div class="block-label">${block.name}</div>
-    <div class="block-controls">
-      <button class="block-controls-btn bc-drag-handle" title="Drag">⠿</button>
-      <button class="block-controls-btn bc-settings" title="Settings" onclick="openSettings('${block.id}')">⚙</button>
-      <button class="block-controls-btn bc-dupe" title="Duplicate" onclick="duplicateBlock('${block.id}')">⧉</button>
-      <button class="block-controls-btn bc-del" title="Delete" onclick="deleteBlock('${block.id}')">✕</button>
-    </div>
-    <div class="block-content">${block.html}</div>
-  `;
-  return wrapper;
+function duplicateBlock(id){
+  saveUndo();
+  const block=State.blocks.find(b=>b.id===id);
+  if(!block) return;
+  const newId=uid();
+  let html=canvas.querySelector(`[data-block-id="${id}"] .block-content`).innerHTML;
+  if(block.isMap){
+    const mId=mapUid();
+    html=html.replace(/id="map_[a-z0-9]+"/,`id="${mId}"`);
+  }
+  const nb={...block,id:newId,html,
+    mapData:JSON.parse(JSON.stringify(block.mapData||{center:[22.5726,88.3639],zoom:13,markers:[]}))
+  };
+  const idx=State.blocks.findIndex(b=>b.id===id);
+  State.blocks.splice(idx+1,0,nb);
+  const ref=canvas.querySelector(`[data-block-id="${id}"]`);
+  // Temporarily push to end, then reorder
+  mountBlock(nb);
+  const newEl=canvas.querySelector(`[data-block-id="${newId}"]`);
+  ref.insertAdjacentElement('afterend',newEl);
+  if(nb.isMap) requestAnimationFrame(()=>initMap(newId));
+  if(nb.isGallery) requestAnimationFrame(()=>initGallery(newId));
+  updateCompCount();
+  showToast('Duplicated');
 }
 
-// ============================================================
-//  MAP MODULE
-// ============================================================
-function initMapInBlock(blockId, block) {
-  const blockEl = canvas.querySelector(`[data-block-id="${blockId}"]`);
-  if (!blockEl) return;
-  const mapEl = blockEl.querySelector('[id^="map_"]');
-  if (!mapEl) return;
-  const mapId = mapEl.id;
+/* ══════════════════════════════════════════════════════
+   MAP MODULE — full state-driven with export support
+══════════════════════════════════════════════════════ */
+function initMap(blockId){
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(!block||!block.isMap) return;
+  const blockEl=canvas.querySelector(`[data-block-id="${blockId}"]`);
+  if(!blockEl) return;
+  const mapEl=blockEl.querySelector('[id^="map_"]');
+  if(!mapEl) return;
+  const mapId=mapEl.id;
+  if(State.mapInstances[blockId]) return; // Already initialized
 
-  // Default center: Kolkata
-  const map = L.map(mapId, { zoomControl: true }).setView([22.5726, 88.3639], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19,
+  const md=block.mapData||{center:[22.5726,88.3639],zoom:13,markers:[]};
+  const map=L.map(mapId,{zoomControl:true}).setView(md.center,md.zoom);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom:19
   }).addTo(map);
 
-  const markers = [];
+  const leafletMarkers=[];
 
-  // Default marker
-  const defaultMarker = L.marker([22.5726, 88.3639])
-    .bindPopup('<b>Kolkata</b><br>City of Joy')
-    .addTo(map);
-  markers.push({ leaflet: defaultMarker, data: { name: 'Kolkata', lat: 22.5726, lng: 88.3639, description: 'City of Joy' } });
+  // Restore saved markers
+  if(md.markers&&md.markers.length){
+    md.markers.forEach(m=>addLeafletMarker(map,leafletMarkers,m));
+  } else {
+    // Default marker
+    const defData={name:'Default Location',lat:md.center[0],lng:md.center[1],description:'Click to explore',icon:''};
+    addLeafletMarker(map,leafletMarkers,defData);
+    block.mapData.markers=[defData];
+  }
 
-  // Click to add marker
-  map.on('click', e => {
-    const { lat, lng } = e.latlng;
-    State.lastCoords = { lat: lat.toFixed(6), lng: lng.toFixed(6) };
-    State.activeMapId = blockId;
-    document.getElementById('coord-display').textContent = `Lat: ${State.lastCoords.lat}, Lng: ${State.lastCoords.lng}`;
+  // Reset view control
+  const ResetCtrl=L.Control.extend({
+    options:{position:'topright'},
+    onAdd(){ const b=L.DomUtil.create('button','');
+      b.innerHTML='⟳'; b.title='Reset View';
+      b.style.cssText='background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;width:30px;height:30px;cursor:pointer;font-size:16px;line-height:1;';
+      L.DomEvent.on(b,'click',()=>map.setView(block.mapData.center,block.mapData.zoom));
+      return b; }
+  });
+  map.addControl(new ResetCtrl());
 
-    const marker = L.marker([lat, lng])
-      .bindPopup(`<b>Custom Marker</b><br>Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`)
-      .addTo(map);
-    const data = { name: 'Custom Marker', lat: parseFloat(lat.toFixed(6)), lng: parseFloat(lng.toFixed(6)), description: '' };
-    markers.push({ leaflet: marker, data });
-    renderMarkerList(blockId);
+  // Fit markers control
+  const FitCtrl=L.Control.extend({
+    options:{position:'topright'},
+    onAdd(){ const b=L.DomUtil.create('button','');
+      b.innerHTML='⊡'; b.title='Fit to Markers';
+      b.style.cssText='background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;width:30px;height:30px;cursor:pointer;font-size:16px;line-height:1;margin-top:4px;';
+      L.DomEvent.on(b,'click',()=>fitMapMarkers(blockId));
+      return b; }
+  });
+  map.addControl(new FitCtrl());
+
+  // Click to add marker + update coord display
+  map.on('click',e=>{
+    const{lat,lng}=e.latlng;
+    State.lastCoords={lat:lat.toFixed(6),lng:lng.toFixed(6)};
+    State.activeMapId=blockId;
+    document.getElementById('coord-display').textContent=
+      `Lat: ${State.lastCoords.lat}, Lng: ${State.lastCoords.lng}`;
   });
 
-  // Reset view button
-  const ResetControl = L.Control.extend({
-    options: { position: 'topright' },
-    onAdd() {
-      const btn = L.DomUtil.create('button', '');
-      btn.innerHTML = '⟳';
-      btn.title = 'Reset View';
-      btn.style.cssText = 'background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;width:30px;height:30px;cursor:pointer;font-size:16px;';
-      L.DomEvent.on(btn, 'click', () => map.setView([22.5726, 88.3639], 13));
-      return btn;
-    }
+  // Track view changes for state
+  map.on('moveend',()=>{
+    const c=map.getCenter();
+    block.mapData.center=[parseFloat(c.lat.toFixed(6)),parseFloat(c.lng.toFixed(6))];
+    block.mapData.zoom=map.getZoom();
   });
-  map.addControl(new ResetControl());
 
-  State.mapInstances[blockId] = { map, markers, mapId };
-  setTimeout(() => map.invalidateSize(), 200);
+  State.mapInstances[blockId]={map,leafletMarkers,mapId};
+  setTimeout(()=>map.invalidateSize(),200);
 }
 
-function renderMarkerList(blockId) {
-  const instance = State.mapInstances[blockId];
-  if (!instance) return;
-  const list = document.getElementById('marker-list');
-  if (!list) return;
-  list.innerHTML = '';
-  instance.markers.forEach((m, i) => {
-    const row = document.createElement('div');
-    row.className = 'marker-row';
-    row.innerHTML = `
-      <span style="font-size:14px;">📍</span>
-      <input value="${m.data.name}" placeholder="Name" onchange="updateMarkerName('${blockId}',${i},this.value)">
-      <span style="font-size:10px;color:#475569;">${m.data.lat?.toFixed(4)}, ${m.data.lng?.toFixed(4)}</span>
-      <button class="btn-xs" style="background:#ef4444;color:#fff;" onclick="removeMarker('${blockId}',${i})">✕</button>
-    `;
+function addLeafletMarker(map,leafletMarkers,data){
+  let icon=undefined;
+  if(data.icon){
+    icon=L.icon({iconUrl:data.icon,iconSize:[32,32],iconAnchor:[16,32],popupAnchor:[0,-32]});
+  }
+  const opts=icon?{icon}:{};
+  const marker=L.marker([data.lat,data.lng],opts)
+    .bindPopup(`<strong style="font-size:14px;">${data.name}</strong>${data.description?`<br><span style="color:#64748b;font-size:12px;">${data.description}</span>`:''}`)
+    .bindTooltip(data.name,{permanent:false,direction:'top',offset:[0,-10]})
+    .addTo(map);
+  leafletMarkers.push({leaflet:marker,data});
+  return marker;
+}
+
+function fitMapMarkers(blockId){
+  const inst=State.mapInstances[blockId];
+  if(!inst||!inst.leafletMarkers.length) return;
+  const bounds=inst.leafletMarkers.map(m=>[m.data.lat,m.data.lng]);
+  inst.map.fitBounds(bounds,{padding:[40,40]});
+}
+
+function syncMapStateFromInstance(blockId){
+  const inst=State.mapInstances[blockId];
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(!inst||!block) return;
+  const c=inst.map.getCenter();
+  block.mapData.center=[parseFloat(c.lat.toFixed(6)),parseFloat(c.lng.toFixed(6))];
+  block.mapData.zoom=inst.map.getZoom();
+  block.mapData.markers=inst.leafletMarkers.map(m=>({...m.data}));
+}
+
+/* ══════════════════════════════════════════════════════
+   MAP MODAL
+══════════════════════════════════════════════════════ */
+function openMapModal(blockId){
+  State.activeMapId=blockId;
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(!block) return;
+  const md=block.mapData;
+  document.getElementById('map-center-lat').value=md.center[0];
+  document.getElementById('map-center-lng').value=md.center[1];
+  document.getElementById('map-zoom').value=md.zoom;
+  renderMarkerList(blockId);
+  document.getElementById('map-modal').style.display='flex';
+}
+
+function renderMarkerList(blockId){
+  const block=State.blocks.find(b=>b.id===blockId);
+  const inst=State.mapInstances[blockId];
+  const list=document.getElementById('marker-list');
+  if(!list) return;
+  const markers=(inst?.leafletMarkers)||[];
+  list.innerHTML=markers.length?'':'<div style="color:#475569;font-size:12px;text-align:center;padding:8px;">No markers yet. Click the map or add below.</div>';
+  markers.forEach((m,i)=>{
+    const row=document.createElement('div');
+    row.className='marker-row';
+    row.innerHTML=`<span>📍</span>
+      <input value="${m.data.name}" placeholder="Name" onchange="updateMarker('${blockId}',${i},'name',this.value)">
+      <input value="${m.data.description||''}" placeholder="Desc" onchange="updateMarker('${blockId}',${i},'description',this.value)">
+      <span style="font-size:10px;color:#334155;white-space:nowrap;">${parseFloat(m.data.lat).toFixed(3)},${parseFloat(m.data.lng).toFixed(3)}</span>
+      <button class="btn-xs" style="background:#ef4444;color:#fff;flex-shrink:0;" onclick="removeMarker('${blockId}',${i})">✕</button>`;
     list.appendChild(row);
   });
 }
 
-function updateMarkerName(blockId, idx, name) {
-  const instance = State.mapInstances[blockId];
-  if (!instance) return;
-  instance.markers[idx].data.name = name;
-  instance.markers[idx].leaflet.setPopupContent(`<b>${name}</b><br>${instance.markers[idx].data.description}`);
+function updateMarker(blockId,idx,field,val){
+  const inst=State.mapInstances[blockId];
+  if(!inst) return;
+  inst.leafletMarkers[idx].data[field]=val;
+  const d=inst.leafletMarkers[idx].data;
+  inst.leafletMarkers[idx].leaflet
+    .bindPopup(`<strong>${d.name}</strong>${d.description?`<br><span style="color:#64748b;font-size:12px;">${d.description}</span>`:''}`)
+    .bindTooltip(d.name,{permanent:false,direction:'top'});
+  syncMapStateFromInstance(blockId);
 }
 
-function removeMarker(blockId, idx) {
-  const instance = State.mapInstances[blockId];
-  if (!instance) return;
-  instance.markers[idx].leaflet.remove();
-  instance.markers.splice(idx, 1);
+function removeMarker(blockId,idx){
+  const inst=State.mapInstances[blockId];
+  if(!inst) return;
+  inst.leafletMarkers[idx].leaflet.remove();
+  inst.leafletMarkers.splice(idx,1);
+  syncMapStateFromInstance(blockId);
   renderMarkerList(blockId);
 }
 
-function loadMarkersFromJSON(blockId, jsonArray) {
-  const instance = State.mapInstances[blockId];
-  if (!instance) return;
-  // Clear existing
-  instance.markers.forEach(m => m.leaflet.remove());
-  instance.markers.length = 0;
-  const bounds = [];
-  jsonArray.forEach(d => {
-    const marker = L.marker([d.lat, d.lng])
-      .bindPopup(`<b>${d.name}</b><br>${d.description || ''}`)
-      .addTo(instance.map);
-    instance.markers.push({ leaflet: marker, data: d });
-    bounds.push([d.lat, d.lng]);
-  });
-  if (bounds.length) instance.map.fitBounds(bounds, { padding: [40, 40] });
+document.getElementById('btn-add-marker').onclick=()=>{
+  const blockId=State.activeMapId;
+  if(!blockId){ showToast('No map selected','#f59e0b'); return; }
+  const inst=State.mapInstances[blockId];
+  if(!inst){ showToast('Map not initialized','#f59e0b'); return; }
+  const coords=State.lastCoords||{lat:22.5726,lng:88.3639};
+  const data={
+    name:document.getElementById('new-marker-name').value.trim()||'New Marker',
+    lat:parseFloat(coords.lat),lng:parseFloat(coords.lng),
+    description:document.getElementById('new-marker-desc').value.trim(),
+    icon:document.getElementById('new-marker-icon').value.trim()
+  };
+  addLeafletMarker(inst.map,inst.leafletMarkers,data);
+  syncMapStateFromInstance(blockId);
   renderMarkerList(blockId);
-  showToast(`Loaded ${jsonArray.length} markers`);
-}
-
-// ============================================================
-//  MAP MODAL
-// ============================================================
-document.getElementById('btn-close-map-modal').onclick = () => {
-  document.getElementById('map-modal').style.display = 'none';
+  document.getElementById('new-marker-name').value='';
+  document.getElementById('new-marker-desc').value='';
+  document.getElementById('new-marker-icon').value='';
+  showToast('Marker added');
 };
 
-document.getElementById('btn-copy-coords').onclick = () => {
-  if (!State.lastCoords) return;
-  navigator.clipboard.writeText(`${State.lastCoords.lat}, ${State.lastCoords.lng}`);
-  showToast('Coordinates copied!');
-};
-
-document.getElementById('btn-add-marker').onclick = () => {
-  const name = document.getElementById('new-marker-name').value.trim() || 'Marker';
-  const desc = document.getElementById('new-marker-desc').value.trim();
-  const coords = State.lastCoords;
-  if (!coords || !State.activeMapId) { showToast('Click on the map first!', '#f59e0b'); return; }
-  const instance = State.mapInstances[State.activeMapId];
-  if (!instance) return;
-  const marker = L.marker([parseFloat(coords.lat), parseFloat(coords.lng)])
-    .bindPopup(`<b>${name}</b><br>${desc}`)
-    .addTo(instance.map);
-  instance.markers.push({ leaflet: marker, data: { name, lat: parseFloat(coords.lat), lng: parseFloat(coords.lng), description: desc } });
-  renderMarkerList(State.activeMapId);
-  document.getElementById('new-marker-name').value = '';
-  document.getElementById('new-marker-desc').value = '';
-};
-
-document.getElementById('btn-load-marker-json').onclick = () => {
-  try {
-    const json = JSON.parse(document.getElementById('marker-json').value);
-    if (!State.activeMapId) { showToast('No map selected', '#f59e0b'); return; }
-    loadMarkersFromJSON(State.activeMapId, json);
-  } catch (e) {
-    showToast('Invalid JSON!', '#ef4444');
-  }
-};
-
-// Open map modal from canvas click
-canvas.addEventListener('click', e => {
-  const mapEl = e.target.closest('[id^="map_"]');
-  if (!mapEl) return;
-  const blockEl = e.target.closest('.canvas-block');
-  if (!blockEl) return;
-  const blockId = blockEl.dataset.blockId;
-  if (State.mapInstances[blockId]) {
-    State.activeMapId = blockId;
-    document.getElementById('map-modal').style.display = 'flex';
+document.getElementById('btn-load-marker-json').onclick=()=>{
+  try{
+    const json=JSON.parse(document.getElementById('marker-json').value);
+    const blockId=State.activeMapId;
+    if(!blockId||!State.mapInstances[blockId]){ showToast('No active map','#f59e0b'); return; }
+    const inst=State.mapInstances[blockId];
+    inst.leafletMarkers.forEach(m=>m.leaflet.remove());
+    inst.leafletMarkers.length=0;
+    json.forEach(d=>addLeafletMarker(inst.map,inst.leafletMarkers,d));
+    syncMapStateFromInstance(blockId);
+    fitMapMarkers(blockId);
     renderMarkerList(blockId);
+    document.getElementById('marker-json').value='';
+    showToast(`Loaded ${json.length} markers`);
+  }catch(e){ showToast('Invalid JSON','#ef4444'); }
+};
+
+document.getElementById('btn-apply-map-config').onclick=()=>{
+  const blockId=State.activeMapId;
+  const inst=State.mapInstances[blockId];
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(!inst||!block) return;
+  const lat=parseFloat(document.getElementById('map-center-lat').value)||22.5726;
+  const lng=parseFloat(document.getElementById('map-center-lng').value)||88.3639;
+  const zoom=parseInt(document.getElementById('map-zoom').value)||13;
+  block.mapData.center=[lat,lng];
+  block.mapData.zoom=zoom;
+  inst.map.setView([lat,lng],zoom);
+  showToast('Map view updated');
+};
+
+document.getElementById('btn-fit-markers').onclick=()=>fitMapMarkers(State.activeMapId);
+document.getElementById('btn-copy-coords').onclick=()=>{
+  if(!State.lastCoords) return;
+  navigator.clipboard.writeText(`${State.lastCoords.lat}, ${State.lastCoords.lng}`);
+  showToast('Coordinates copied');
+};
+document.getElementById('btn-close-map-modal').onclick=()=>{
+  if(State.activeMapId) syncMapStateFromInstance(State.activeMapId);
+  document.getElementById('map-modal').style.display='none';
+};
+
+/* ══════════════════════════════════════════════════════
+   GALLERY INIT
+══════════════════════════════════════════════════════ */
+function initGallery(blockId){
+  const blockEl=canvas.querySelector(`[data-block-id="${blockId}"]`);
+  if(!blockEl) return;
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(!block) return;
+
+  let current=0;
+  let speed=block.settings?.gallerySpeed||3000;
+  let timer=null;
+
+  function showSlide(n){
+    const slides=blockEl.querySelectorAll('[data-slide]');
+    const dots=blockEl.querySelector('[data-gallery-dots]');
+    if(!slides.length) return;
+    slides.forEach((s,i)=>s.classList.toggle('active',i===n));
+    if(dots){
+      dots.innerHTML=Array.from(slides).map((_,i)=>
+        `<span style="display:inline-block;width:${i===n?18:8}px;height:8px;border-radius:4px;background:${i===n?'#fff':'rgba(255,255,255,.3)'};margin:0 3px;cursor:pointer;transition:all .3s;" onclick="galleryGoTo('${blockId}',${i})"></span>`
+      ).join('');
+    }
+    current=n;
   }
-});
 
-// ============================================================
-//  RIGHT SETTINGS PANEL
-// ============================================================
-function openSettings(blockId) {
-  State.selectedBlockId = blockId;
-  const block = State.blocks.find(b => b.id === blockId);
-  const rp = document.getElementById('right-panel');
+  function next(){ const slides=blockEl.querySelectorAll('[data-slide]'); showSlide((current+1)%slides.length); }
+  function prev(){ const slides=blockEl.querySelectorAll('[data-slide]'); showSlide((current-1+slides.length)%slides.length); }
+
+  blockEl.querySelector('[data-gallery-next]')?.addEventListener('click',next);
+  blockEl.querySelector('[data-gallery-prev]')?.addEventListener('click',prev);
+
+  function startAuto(){ clearInterval(timer); timer=setInterval(next,speed); }
+  function stopAuto(){ clearInterval(timer); }
+
+  blockEl.querySelector('[data-gallery-inner]')?.addEventListener('mouseenter',stopAuto);
+  blockEl.querySelector('[data-gallery-inner]')?.addEventListener('mouseleave',startAuto);
+
+  // Store reference for settings control
+  block._galleryCtrl={ showSlide, startAuto, stopAuto, setSpeed:(s)=>{ speed=s; block.settings.gallerySpeed=s; stopAuto(); startAuto(); } };
+  window['galleryGoTo']=window['galleryGoTo']||(function(bid,idx){
+    const b=State.blocks.find(x=>x.id===bid);
+    if(b&&b._galleryCtrl) b._galleryCtrl.showSlide(idx);
+  });
+
+  showSlide(0);
+  startAuto();
+}
+
+/* ══════════════════════════════════════════════════════
+   IMAGE MODAL
+══════════════════════════════════════════════════════ */
+function openImgModal(blockId){
+  State.imgModalTarget=blockId;
+  document.getElementById('img-modal').style.display='flex';
+}
+document.getElementById('btn-close-img-modal').onclick=()=>{
+  document.getElementById('img-modal').style.display='none';
+  State.imgModalTarget=null;
+};
+document.getElementById('img-file-input').addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    document.getElementById('img-url-input').value=ev.target.result;
+    const prev=document.getElementById('img-preview');
+    prev.style.display='block';
+    prev.innerHTML=`<img src="${ev.target.result}" style="max-height:80px;">`;
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById('btn-apply-img').onclick=()=>{
+  const blockId=State.imgModalTarget;
+  if(!blockId) return;
+  const url=document.getElementById('img-url-input').value.trim();
+  const w=document.getElementById('img-width').value.trim()||'100%';
+  const r=document.getElementById('img-radius').value.trim()||'0px';
+  const align=document.getElementById('img-align').value;
+  const alt=document.getElementById('img-alt').value.trim()||'Image';
+  if(!url){ showToast('Enter an image URL','#f59e0b'); return; }
+  const blockEl=canvas.querySelector(`[data-block-id="${blockId}"] .block-content`);
+  if(!blockEl) return;
+  const img=blockEl.querySelector('img');
+  if(img){
+    img.src=url; img.alt=alt;
+    img.style.maxWidth=w; img.style.borderRadius=r;
+    img.style.display='block';
+    if(align==='center') img.style.margin='0 auto';
+    else if(align==='right') img.style.marginLeft='auto';
+    else img.style.margin='0';
+  } else {
+    blockEl.innerHTML=`<div style="padding:40px;text-align:${align};background:#fff;font-family:var(--font);"><img src="${url}" alt="${alt}" style="max-width:${w};border-radius:${r};height:auto;display:inline-block;"><p style="font-size:13px;color:#94a3b8;margin-top:10px;" contenteditable>Image caption</p></div>`;
+  }
+  // Update block html
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(block) block.html=blockEl.innerHTML;
+  document.getElementById('img-modal').style.display='none';
+  showToast('Image updated');
+};
+
+/* ══════════════════════════════════════════════════════
+   RIGHT SETTINGS PANEL
+══════════════════════════════════════════════════════ */
+function openSettings(blockId){
+  State.selectedBlockId=blockId;
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(!block) return;
+  const rp=document.getElementById('right-panel');
   rp.classList.add('open');
-  const content = document.getElementById('right-panel-content');
-  content.innerHTML = `
-    <div class="rp-section">
-      <div class="rp-label">Block</div>
-      <div style="font-size:13px;color:#f1f5f9;font-weight:600;">${block.name}</div>
-    </div>
-    <div class="rp-section">
-      <div class="rp-label">Spacing</div>
-      <div class="rp-row"><label>Padding</label><input class="rp-input" type="text" id="rp-padding" placeholder="e.g. 40px"></div>
-      <div class="rp-row"><label>Margin</label><input class="rp-input" type="text" id="rp-margin" placeholder="e.g. 0 0 20px"></div>
-    </div>
-    <div class="rp-section">
-      <div class="rp-label">Background</div>
-      <div class="rp-row"><label>Color</label><input type="color" class="rp-color" id="rp-bg" value="#ffffff"></div>
-    </div>
-    <div class="rp-section">
-      <div class="rp-label">Alignment</div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn-xs" style="background:#334155;color:#94a3b8;flex:1;" onclick="applyAlign('${blockId}','left')">◀ Left</button>
-        <button class="btn-xs" style="background:#334155;color:#94a3b8;flex:1;" onclick="applyAlign('${blockId}','center')">Center</button>
-        <button class="btn-xs" style="background:#334155;color:#94a3b8;flex:1;" onclick="applyAlign('${blockId}','right')">Right ▶</button>
-      </div>
-    </div>
-    ${block.isMap ? `<div class="rp-section">
-      <div class="rp-label">Map</div>
-      <button class="tb-btn tb-btn-primary" style="width:100%;justify-content:center;" onclick="State.activeMapId='${blockId}';document.getElementById('map-modal').style.display='flex';renderMarkerList('${blockId}')">📍 Manage Markers</button>
-    </div>` : ''}
-    <div class="rp-section">
-      <div class="rp-label">Visibility</div>
-      <div class="rp-row"><label>Hidden</label>
-        <input type="checkbox" id="rp-hidden" style="accent-color:#3b82f6;" onchange="toggleBlockVisibility('${blockId}',this.checked)">
-      </div>
-    </div>
-  `;
+  renderSettingsPanel(block,State.activeRpTab);
+}
 
-  document.getElementById('rp-padding').addEventListener('input', e => {
-    const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content > *`);
-    if (el) el.style.padding = e.target.value;
+// Tab switching
+document.querySelectorAll('.rp-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.rp-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    State.activeRpTab=tab.dataset.tab;
+    if(State.selectedBlockId) renderSettingsPanel(State.blocks.find(b=>b.id===State.selectedBlockId),State.activeRpTab);
   });
-  document.getElementById('rp-margin').addEventListener('input', e => {
-    const el = canvas.querySelector(`[data-block-id="${blockId}"]`);
-    if (el) el.style.margin = e.target.value;
-  });
-  document.getElementById('rp-bg').addEventListener('input', e => {
-    const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content > *`);
-    if (el) el.style.backgroundColor = e.target.value;
-  });
-}
-
-function closeRightPanel() {
-  document.getElementById('right-panel').classList.remove('open');
-  State.selectedBlockId = null;
-}
-
-function applyAlign(blockId, align) {
-  const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content > *`);
-  if (el) el.style.textAlign = align;
-}
-
-function toggleBlockVisibility(blockId, hidden) {
-  const el = canvas.querySelector(`[data-block-id="${blockId}"] .block-content`);
-  if (el) el.style.opacity = hidden ? '.3' : '1';
-}
-
-document.getElementById('btn-close-panel').onclick = closeRightPanel;
-
-// ============================================================
-//  GLOBAL THEME ENGINE
-// ============================================================
-function applyTheme() {
-  const root = document.documentElement;
-  root.style.setProperty('--primary', document.getElementById('th-primary').value);
-  root.style.setProperty('--secondary', document.getElementById('th-secondary').value);
-  root.style.setProperty('--bg', document.getElementById('th-bg').value);
-  root.style.setProperty('--text', document.getElementById('th-text').value);
-  root.style.setProperty('--font', document.getElementById('th-font').value);
-  canvas.style.background = document.getElementById('th-bg').value;
-}
-
-['th-primary','th-secondary','th-bg','th-text','th-font'].forEach(id => {
-  document.getElementById(id).addEventListener('input', applyTheme);
 });
 
-document.getElementById('btn-theme').onclick = () => {
+function renderSettingsPanel(block,tab){
+  const content=document.getElementById('right-panel-content');
+  const wrap=canvas.querySelector(`[data-block-id="${block.id}"]`);
+  const s=block.styles||{};
+
+  if(tab==='style'){
+    content.innerHTML=`
+      <div class="rp-section">
+        <div class="rp-label">Spacing</div>
+        <div class="rp-row"><label>Padding</label><input class="rp-input" id="rp-pt" value="${s.paddingTop||''}" placeholder="0px" title="Top"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px;">
+          <input class="rp-input" id="rp-pl" value="${s.paddingLeft||''}" placeholder="Left">
+          <input class="rp-input" id="rp-pr" value="${s.paddingRight||''}" placeholder="Right">
+        </div>
+        <input class="rp-input" id="rp-pb" value="${s.paddingBottom||''}" placeholder="Bottom" style="margin-bottom:7px;width:100%;">
+        <div class="rp-row"><label>Margin</label><input class="rp-input" id="rp-mg" value="${s.margin||''}" placeholder="0 auto"></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-label">Background</div>
+        <div class="rp-row"><label>Color</label><input type="color" class="rp-color" id="rp-bg" value="${s.bgColor||'#ffffff'}"><input class="rp-input" id="rp-bg-hex" value="${s.bgColor||''}" placeholder="#hex or rgba(…)" style="flex:1;"></div>
+        <div class="rp-row"><label>Gradient</label><input class="rp-input" id="rp-grad" value="${s.bgGradient||''}" placeholder="linear-gradient(135deg,#x,#y)"></div>
+        <div style="margin-top:4px;">
+          <div style="font-size:10px;color:#475569;margin-bottom:4px;">Section Bg Image URL</div>
+          <input class="rp-input" id="rp-bgimg" value="${s.bgImage||''}" placeholder="https://…/img.jpg">
+        </div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-label">Shape & Shadow</div>
+        <div class="rp-row"><label>Radius</label><input class="rp-input" id="rp-radius" value="${s.borderRadius||''}" placeholder="0px"></div>
+        <div class="rp-row"><label>Shadow</label>
+          <select class="rp-input" id="rp-shadow">
+            <option value="">None</option>
+            <option value="0 2px 8px rgba(0,0,0,.08)" ${s.shadow==='0 2px 8px rgba(0,0,0,.08)'?'selected':''}>Soft</option>
+            <option value="0 4px 24px rgba(0,0,0,.15)" ${s.shadow==='0 4px 24px rgba(0,0,0,.15)'?'selected':''}>Medium</option>
+            <option value="0 8px 40px rgba(0,0,0,.25)" ${s.shadow==='0 8px 40px rgba(0,0,0,.25)'?'selected':''}>Strong</option>
+          </select>
+        </div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-label">Text & Layout</div>
+        <div class="rp-row"><label>Text Align</label>
+          <select class="rp-input" id="rp-align">
+            <option value="">—</option>
+            <option value="left" ${s.textAlign==='left'?'selected':''}>Left</option>
+            <option value="center" ${s.textAlign==='center'?'selected':''}>Center</option>
+            <option value="right" ${s.textAlign==='right'?'selected':''}>Right</option>
+          </select>
+        </div>
+        <div class="rp-row"><label>Opacity</label><input class="rp-input" id="rp-opacity" value="${s.opacity||1}" type="range" min="0.1" max="1" step="0.05" style="padding:0;"></div>
+      </div>
+      <div class="rp-section">
+        <button class="tb-btn tb-primary" style="width:100%;justify-content:center;" id="btn-apply-styles">✓ Apply Styles</button>
+      </div>`;
+
+    document.getElementById('btn-apply-styles').onclick=()=>applyStyles(block.id);
+    // Live color sync
+    document.getElementById('rp-bg').addEventListener('input',e=>{
+      document.getElementById('rp-bg-hex').value=e.target.value;
+    });
+
+  } else if(tab==='content'){
+    // Nav link editor
+    const blockEl=canvas.querySelector(`[data-block-id="${block.id}"] .block-content`);
+    const links=[...blockEl.querySelectorAll('[data-nav-link]')];
+    const logoEl=blockEl.querySelector('[data-logo]');
+
+    let html=``;
+
+    if(logoEl){
+      html+=`<div class="rp-section">
+        <div class="rp-label">Logo</div>
+        <div class="rp-row" style="flex-direction:column;align-items:flex-start;gap:4px;"><label>Type</label>
+          <select class="rp-input" id="logo-type" onchange="toggleLogoType('${block.id}',this.value)">
+            <option value="text">Text</option>
+            <option value="image">Image</option>
+          </select>
+        </div>
+        <div id="logo-text-area"><div class="rp-row"><label>Text</label><input class="rp-input" id="logo-text" value="${logoEl.textContent.trim()}" oninput="logoEl_update('${block.id}',this.value)"></div></div>
+        <div id="logo-img-area" style="display:none;">
+          <div class="rp-row" style="flex-direction:column;gap:4px;"><label>Image URL</label><input class="rp-input" id="logo-img-src" placeholder="https://…/logo.png" onchange="logoEl_setImg('${block.id}',this.value)"></div>
+          <div class="rp-row"><label>Width</label><input class="rp-input" id="logo-img-w" value="120px" onchange="logoEl_setImgW('${block.id}',this.value)"></div>
+        </div>
+      </div>`;
+    }
+
+    if(links.length){
+      html+=`<div class="rp-section"><div class="rp-label">Navigation Links</div>`;
+      links.forEach((link,i)=>{
+        html+=`<div style="border:1px solid #0f172a;border-radius:6px;padding:8px;margin-bottom:8px;">
+          <div style="font-size:10px;color:#475569;margin-bottom:6px;">Link ${i+1}: <b style="color:#94a3b8;">${link.textContent.trim()}</b></div>
+          <div class="rp-row"><label>Text</label><input class="rp-input" value="${link.textContent.trim()}" onchange="updateNavLink('${block.id}',${i},'text',this.value)"></div>
+          <div class="rp-row"><label>URL</label><input class="rp-input" value="${link.getAttribute('href')||'#'}" placeholder="https://…" onchange="updateNavLink('${block.id}',${i},'href',this.value)"></div>
+          <div class="rp-row"><label>New Tab</label><input type="checkbox" style="accent-color:#3b82f6;" ${link.getAttribute('target')==='_blank'?'checked':''} onchange="updateNavLink('${block.id}',${i},'target',this.checked?'_blank':'')"></div>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
+
+    if(block.isGallery){
+      const spd=block.settings?.gallerySpeed||3000;
+      html+=`<div class="rp-section"><div class="rp-label">Gallery Settings</div>
+        <div class="rp-row"><label>Speed (ms)</label><input class="rp-input" type="number" id="gallery-speed" value="${spd}" min="500" max="10000" step="500" onchange="setGallerySpeed('${block.id}',+this.value)"></div>
+        <div style="font-size:11px;color:#475569;margin-top:6px;">Add/remove slides by duplicating the block and editing images directly in canvas.</div>
+      </div>`;
+    }
+
+    if(!logoEl&&!links.length&&!block.isGallery){
+      html=`<div class="rp-section"><div style="font-size:12px;color:#475569;text-align:center;padding:16px;">Click text on canvas to edit inline.<br>Use the Style and Advanced tabs for appearance.</div></div>`;
+    }
+
+    content.innerHTML=html||`<div class="rp-section"><div style="font-size:12px;color:#475569;text-align:center;padding:16px;">Click text on canvas to edit inline.</div></div>`;
+
+  } else if(tab==='advanced'){
+    content.innerHTML=`
+      <div class="rp-section">
+        <div class="rp-label">CSS Class / ID</div>
+        <div class="rp-row"><label>ID</label><input class="rp-input" id="rp-el-id" value="${block.settings.elId||''}" placeholder="section-about" onchange="updateBlockSetting('${block.id}','elId',this.value)"></div>
+        <div class="rp-row"><label>Class</label><input class="rp-input" id="rp-el-class" value="${block.settings.elClass||''}" placeholder="custom-class" onchange="updateBlockSetting('${block.id}','elClass',this.value)"></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-label">Visibility</div>
+        <div class="rp-row"><label>Hidden</label><input type="checkbox" style="accent-color:#3b82f6;" ${block.settings.hidden?'checked':''} onchange="toggleVisibility('${block.id}',this.checked)"></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-label">Animation (Export)</div>
+        <div class="rp-row"><label>Preset</label>
+          <select class="rp-input" id="rp-anim" onchange="updateBlockSetting('${block.id}','animation',this.value)">
+            <option value="">None</option>
+            <option value="fade-in" ${block.settings.animation==='fade-in'?'selected':''}>Fade In</option>
+            <option value="slide-up" ${block.settings.animation==='slide-up'?'selected':''}>Slide Up</option>
+            <option value="slide-left" ${block.settings.animation==='slide-left'?'selected':''}>Slide Left</option>
+            <option value="zoom-in" ${block.settings.animation==='zoom-in'?'selected':''}>Zoom In</option>
+          </select>
+        </div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-label">Danger Zone</div>
+        <button class="btn-xs" style="background:#ef4444;color:#fff;width:100%;padding:7px;" onclick="deleteBlock('${block.id}')">🗑 Delete This Block</button>
+      </div>`;
+  }
+}
+
+/* Nav link updater */
+window.updateNavLink=function(blockId,idx,field,val){
+  const blockEl=canvas.querySelector(`[data-block-id="${blockId}"] .block-content`);
+  const links=[...blockEl.querySelectorAll('[data-nav-link]')];
+  if(!links[idx]) return;
+  if(field==='text') links[idx].textContent=val;
+  else if(field==='href') links[idx].setAttribute('href',val);
+  else if(field==='target'){ if(val) links[idx].setAttribute('target',val); else links[idx].removeAttribute('target'); }
+};
+
+/* Logo updaters */
+window.logoEl_update=function(blockId,val){
+  const el=canvas.querySelector(`[data-block-id="${blockId}"] [data-logo]`);
+  if(el) el.textContent=val;
+};
+window.logoEl_setImg=function(blockId,src){
+  const el=canvas.querySelector(`[data-block-id="${blockId}"] [data-logo]`);
+  if(!el) return;
+  el.innerHTML=`<img src="${src}" style="height:36px;width:auto;" alt="Logo">`;
+};
+window.logoEl_setImgW=function(blockId,w){
+  const img=canvas.querySelector(`[data-block-id="${blockId}"] [data-logo] img`);
+  if(img) img.style.height=w;
+};
+window.toggleLogoType=function(blockId,type){
+  document.getElementById('logo-text-area').style.display=type==='text'?'block':'none';
+  document.getElementById('logo-img-area').style.display=type==='image'?'block':'none';
+};
+
+/* Gallery speed setter */
+window.setGallerySpeed=function(blockId,speed){
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(block&&block._galleryCtrl) block._galleryCtrl.setSpeed(speed);
+};
+
+/* Block setting updater */
+window.updateBlockSetting=function(blockId,key,val){
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(block) block.settings[key]=val;
+};
+
+/* Visibility toggle */
+window.toggleVisibility=function(blockId,hidden){
+  const el=canvas.querySelector(`[data-block-id="${blockId}"] .block-content`);
+  if(el) el.style.opacity=hidden?'0.15':'1';
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(block) block.settings.hidden=hidden;
+};
+
+/* Apply Styles */
+window.applyStyles=function(blockId){
+  const block=State.blocks.find(b=>b.id===blockId);
+  if(!block) return;
+  const wrap=canvas.querySelector(`[data-block-id="${blockId}"]`);
+  const inner=wrap?.querySelector('.block-content>*');
+  if(!wrap) return;
+
+  const get=id=>document.getElementById(id)?.value||'';
+  const pt=get('rp-pt'), pb=get('rp-pb'), pl=get('rp-pl'), pr=get('rp-pr');
+  const mg=get('rp-mg');
+  const bg=get('rp-bg-hex')||get('rp-bg');
+  const grad=get('rp-grad');
+  const bgimg=get('rp-bgimg');
+  const radius=get('rp-radius');
+  const shadow=get('rp-shadow');
+  const align=get('rp-align');
+  const opacity=get('rp-opacity');
+
+  block.styles={
+    paddingTop:pt,paddingBottom:pb,paddingLeft:pl,paddingRight:pr,
+    margin:mg,bgColor:bg,bgGradient:grad,bgImage:bgimg,
+    borderRadius:radius,shadow,textAlign:align,opacity
+  };
+
+  if(pt||pb||pl||pr) wrap.style.padding=`${pt||0} ${pr||0} ${pb||0} ${pl||0}`;
+  if(mg) wrap.style.margin=mg;
+  if(radius) wrap.style.borderRadius=radius;
+  if(shadow) wrap.style.boxShadow=shadow;
+  if(opacity) wrap.style.opacity=opacity;
+  if(inner){
+    if(align) inner.style.textAlign=align;
+    if(bg) inner.style.background=bg;
+    if(grad) inner.style.backgroundImage=grad;
+    if(bgimg) inner.style.backgroundImage=`url('${bgimg}')`, inner.style.backgroundSize='cover', inner.style.backgroundPosition='center';
+  }
+  showToast('Styles applied');
+};
+
+function closeRightPanel(){
+  document.getElementById('right-panel').classList.remove('open');
+  State.selectedBlockId=null;
+}
+document.getElementById('btn-close-panel').onclick=closeRightPanel;
+
+/* ══════════════════════════════════════════════════════
+   GLOBAL THEME ENGINE
+══════════════════════════════════════════════════════ */
+function applyTheme(){
+  const r=document.documentElement.style;
+  const t=State.theme;
+  r.setProperty('--primary',t.primary);
+  r.setProperty('--secondary',t.secondary);
+  r.setProperty('--bg',t.bg);
+  r.setProperty('--text',t.text);
+  r.setProperty('--font',t.font);
+  canvas.style.background=t.bg;
+}
+
+['th-primary','th-secondary','th-bg','th-text','th-accent','th-font','th-radius'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input',e=>{
+    const map={'th-primary':'primary','th-secondary':'secondary','th-bg':'bg','th-text':'text','th-accent':'accent','th-font':'font','th-radius':'radius'};
+    State.theme[map[id]]=e.target.value;
+    applyTheme();
+  });
+});
+
+document.getElementById('btn-theme').onclick=()=>{
   document.getElementById('theme-panel').classList.toggle('open');
 };
-
-// Close theme panel on outside click
-document.addEventListener('click', e => {
-  const tp = document.getElementById('theme-panel');
-  if (!tp.contains(e.target) && e.target.id !== 'btn-theme') tp.classList.remove('open');
+document.addEventListener('click',e=>{
+  if(!document.getElementById('theme-panel').contains(e.target)&&e.target.id!=='btn-theme')
+    document.getElementById('theme-panel').classList.remove('open');
+  if(!document.getElementById('seo-panel').contains(e.target)&&e.target.id!=='btn-seo')
+    document.getElementById('seo-panel').classList.remove('open');
 });
 
-// ============================================================
-//  DEVICE PREVIEW
-// ============================================================
-document.getElementById('btn-desktop').onclick = () => {
-  document.getElementById('canvas-wrapper').classList.remove('mobile');
-  document.getElementById('btn-desktop').classList.add('active');
-  document.getElementById('btn-mobile').classList.remove('active');
-  State.deviceMode = 'desktop';
-  refreshMaps();
+/* ══════════════════════════════════════════════════════
+   SEO PANEL
+══════════════════════════════════════════════════════ */
+document.getElementById('btn-seo').onclick=()=>document.getElementById('seo-panel').classList.toggle('open');
+document.getElementById('btn-close-seo').onclick=()=>document.getElementById('seo-panel').classList.remove('open');
+['seo-title','seo-desc','seo-og'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',e=>{
+    const map={'seo-title':'title','seo-desc':'desc','seo-og':'og'};
+    State.seo[map[id]]=e.target.value;
+  });
+});
+
+/* ══════════════════════════════════════════════════════
+   DEVICE PREVIEW
+══════════════════════════════════════════════════════ */
+function setDevice(mode){
+  const w=document.getElementById('canvas-wrapper');
+  w.classList.remove('mobile','tablet');
+  if(mode==='mobile') w.classList.add('mobile');
+  if(mode==='tablet') w.classList.add('tablet');
+  State.deviceMode=mode;
+  ['btn-desktop','btn-tablet','btn-mobile'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('btn-'+mode).classList.add('active');
+  setTimeout(()=>Object.values(State.mapInstances).forEach(i=>i.map.invalidateSize()),350);
+}
+document.getElementById('btn-desktop').onclick=()=>setDevice('desktop');
+document.getElementById('btn-tablet').onclick=()=>setDevice('tablet');
+document.getElementById('btn-mobile').onclick=()=>setDevice('mobile');
+
+/* ══════════════════════════════════════════════════════
+   GRID OVERLAY
+══════════════════════════════════════════════════════ */
+document.getElementById('btn-grid').onclick=()=>{
+  State.gridOn=!State.gridOn;
+  canvas.classList.toggle('grid-on',State.gridOn);
+  const btn=document.getElementById('btn-grid');
+  btn.style.background=State.gridOn?'#1e40af':'';
+  btn.style.color=State.gridOn?'#fff':'';
 };
-document.getElementById('btn-mobile').onclick = () => {
-  document.getElementById('canvas-wrapper').classList.add('mobile');
-  document.getElementById('btn-mobile').classList.add('active');
-  document.getElementById('btn-desktop').classList.remove('active');
-  State.deviceMode = 'mobile';
-  refreshMaps();
-};
 
-function refreshMaps() {
-  setTimeout(() => {
-    Object.values(State.mapInstances).forEach(inst => inst.map.invalidateSize());
-  }, 350);
+/* ══════════════════════════════════════════════════════
+   UNDO / REDO
+══════════════════════════════════════════════════════ */
+function saveUndo(){
+  // Sync current DOM html into state before saving snapshot
+  State.blocks.forEach(b=>{
+    const el=canvas.querySelector(`[data-block-id="${b.id}"] .block-content`);
+    if(el) b.html=el.innerHTML;
+    if(b.isMap) syncMapStateFromInstance(b.id);
+  });
+  State.undoStack.push(JSON.stringify({blocks:State.blocks,theme:State.theme}));
+  if(State.undoStack.length>60) State.undoStack.shift();
+  State.redoStack=[];
 }
 
-// ============================================================
-//  GRID OVERLAY
-// ============================================================
-document.getElementById('btn-grid').onclick = () => {
-  State.gridOn = !State.gridOn;
-  canvas.classList.toggle('grid-on', State.gridOn);
-  document.getElementById('btn-grid').style.background = State.gridOn ? '#1e40af' : '';
-  document.getElementById('btn-grid').style.color = State.gridOn ? '#fff' : '';
-};
-
-// ============================================================
-//  UNDO / REDO
-// ============================================================
-function saveUndo() {
-  State.undoStack.push(JSON.stringify(State.blocks));
-  if (State.undoStack.length > 50) State.undoStack.shift();
-  State.redoStack = [];
-}
-
-function undo() {
-  if (!State.undoStack.length) return;
-  State.redoStack.push(JSON.stringify(State.blocks));
-  const prev = JSON.parse(State.undoStack.pop());
-  restoreBlocks(prev);
-  showToast('Undo', '#64748b');
-}
-
-function redo() {
-  if (!State.redoStack.length) return;
-  State.undoStack.push(JSON.stringify(State.blocks));
-  const next = JSON.parse(State.redoStack.pop());
-  restoreBlocks(next);
-  showToast('Redo', '#64748b');
-}
-
-function restoreBlocks(blocks) {
-  // Clean maps
-  Object.values(State.mapInstances).forEach(i => i.map.remove());
-  State.mapInstances = {};
-  canvas.innerHTML = '';
-  canvas.appendChild(canvasEmpty);
-  State.blocks = [];
-  if (!blocks.length) { canvasEmpty.style.display = ''; updateCompCount(); return; }
-  canvasEmpty.style.display = 'none';
-  blocks.forEach(block => {
+function restoreSnapshot(snap){
+  Object.values(State.mapInstances).forEach(i=>i.map.remove());
+  State.mapInstances={};
+  canvas.innerHTML=''; canvas.appendChild(canvasEmpty);
+  State.blocks=[];
+  if(!snap.blocks||!snap.blocks.length){ canvasEmpty.style.display=''; updateCompCount(); return; }
+  canvasEmpty.style.display='none';
+  // Restore theme
+  if(snap.theme){
+    State.theme=snap.theme;
+    document.getElementById('th-primary').value=snap.theme.primary||'#2563eb';
+    document.getElementById('th-secondary').value=snap.theme.secondary||'#7c3aed';
+    document.getElementById('th-bg').value=snap.theme.bg||'#ffffff';
+    document.getElementById('th-text').value=snap.theme.text||'#111827';
+    document.getElementById('th-font').value=snap.theme.font||"'DM Sans',sans-serif";
+    applyTheme();
+  }
+  snap.blocks.forEach(block=>{
     State.blocks.push(block);
-    const wrapper = createBlockWrapper(block);
-    canvas.appendChild(wrapper);
-    if (block.isMap) requestAnimationFrame(() => initMapInBlock(block.id, block));
+    mountBlock(block);
+    if(block.isMap) requestAnimationFrame(()=>initMap(block.id));
+    if(block.isGallery) requestAnimationFrame(()=>initGallery(block.id));
   });
   updateCompCount();
 }
 
-document.getElementById('btn-undo').onclick = undo;
-document.getElementById('btn-redo').onclick = redo;
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+function undo(){
+  if(!State.undoStack.length) return;
+  State.redoStack.push(JSON.stringify({blocks:State.blocks,theme:State.theme}));
+  restoreSnapshot(JSON.parse(State.undoStack.pop()));
+  showToast('Undo','#64748b');
+}
+function redo(){
+  if(!State.redoStack.length) return;
+  State.undoStack.push(JSON.stringify({blocks:State.blocks,theme:State.theme}));
+  restoreSnapshot(JSON.parse(State.redoStack.pop()));
+  showToast('Redo','#64748b');
+}
+document.getElementById('btn-undo').onclick=undo;
+document.getElementById('btn-redo').onclick=redo;
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){ e.preventDefault(); undo(); }
+  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){ e.preventDefault(); redo(); }
 });
 
-// ============================================================
-//  SAVE / LOAD (LocalStorage)
-// ============================================================
-document.getElementById('btn-save').onclick = () => {
-  const data = State.blocks.map(b => ({
-    ...b,
-    html: canvas.querySelector(`[data-block-id="${b.id}"] .block-content`)?.innerHTML || b.html
-  }));
-  localStorage.setItem('pageforge_layout', JSON.stringify(data));
+/* ══════════════════════════════════════════════════════
+   SAVE / LOAD (LocalStorage)
+══════════════════════════════════════════════════════ */
+function collectCurrentState(){
+  State.blocks.forEach(b=>{
+    const el=canvas.querySelector(`[data-block-id="${b.id}"] .block-content`);
+    if(el) b.html=el.innerHTML;
+    if(b.isMap) syncMapStateFromInstance(b.id);
+  });
+  return{blocks:State.blocks,theme:State.theme,seo:State.seo};
+}
+
+document.getElementById('btn-save').onclick=()=>{
+  localStorage.setItem('pf_v2',JSON.stringify(collectCurrentState()));
   showToast('Layout saved! 💾');
 };
-
-document.getElementById('btn-load').onclick = () => {
-  const raw = localStorage.getItem('pageforge_layout');
-  if (!raw) { showToast('No saved layout found', '#f59e0b'); return; }
-  try {
-    const blocks = JSON.parse(raw);
-    restoreBlocks(blocks);
-    showToast('Layout restored! 📂');
-  } catch { showToast('Failed to load', '#ef4444'); }
+document.getElementById('btn-load').onclick=()=>{
+  const raw=localStorage.getItem('pf_v2');
+  if(!raw){ showToast('No saved layout','#f59e0b'); return; }
+  try{ const data=JSON.parse(raw);
+    if(data.seo){ State.seo=data.seo; document.getElementById('seo-title').value=data.seo.title||''; document.getElementById('seo-desc').value=data.seo.desc||''; document.getElementById('seo-og').value=data.seo.og||''; }
+    restoreSnapshot(data); showToast('Layout restored! 📂');
+  }catch{ showToast('Failed to load','#ef4444'); }
 };
 
-// Auto-restore on load
-window.addEventListener('load', () => {
-  const raw = localStorage.getItem('pageforge_layout');
-  if (raw) {
-    try {
-      const blocks = JSON.parse(raw);
-      if (blocks.length) { restoreBlocks(blocks); showToast('Auto-restored saved layout'); }
-    } catch {}
-  }
+window.addEventListener('load',()=>{
+  const raw=localStorage.getItem('pf_v2');
+  if(raw){ try{ const data=JSON.parse(raw); if(data.blocks?.length){ if(data.seo){ State.seo=data.seo; } restoreSnapshot(data); showToast('Auto-restored layout'); }}catch{} }
 });
 
-// ============================================================
-//  CLEAR
-// ============================================================
-document.getElementById('btn-clear').onclick = () => {
-  if (!confirm('Clear all components?')) return;
-  saveUndo();
-  restoreBlocks([]);
-  showToast('Canvas cleared', '#ef4444');
+document.getElementById('btn-clear').onclick=()=>{
+  if(!confirm('Clear canvas?')) return;
+  saveUndo(); restoreSnapshot({blocks:[],theme:State.theme});
+  showToast('Cleared','#ef4444');
 };
 
-// ============================================================
-//  EXPORT JSON
-// ============================================================
-document.getElementById('btn-export-json').onclick = () => {
-  const data = State.blocks.map(b => ({
-    ...b,
-    html: canvas.querySelector(`[data-block-id="${b.id}"] .block-content`)?.innerHTML || b.html,
-    mapData: State.mapInstances[b.id]?.markers.map(m => m.data) || []
-  }));
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'pageforge-layout.json';
-  a.click();
-  showToast('JSON exported!');
+/* ══════════════════════════════════════════════════════
+   EXPORT JSON
+══════════════════════════════════════════════════════ */
+document.getElementById('btn-export-json').onclick=()=>{
+  const data=collectCurrentState();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='pageforge-layout.json'; a.click();
+  showToast('JSON exported');
 };
 
-// ============================================================
-//  IMPORT JSON
-// ============================================================
-document.getElementById('import-json-input').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const blocks = JSON.parse(ev.target.result);
-      restoreBlocks(blocks);
-      showToast('Layout imported!');
-    } catch { showToast('Invalid JSON file', '#ef4444'); }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
+document.getElementById('import-json-input').addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{ try{ const data=JSON.parse(ev.target.result); restoreSnapshot(data); showToast('Layout imported'); }catch{ showToast('Invalid JSON','#ef4444'); } };
+  r.readAsText(file); e.target.value='';
 });
 
-// ============================================================
-//  CODE VIEW
-// ============================================================
-document.getElementById('btn-code').onclick = () => {
-  document.getElementById('code-view').textContent = generateHTML();
-  document.getElementById('code-modal').style.display = 'flex';
+/* ══════════════════════════════════════════════════════
+   EXPORT ENGINE — Clean HTML with maps, no contenteditable
+══════════════════════════════════════════════════════ */
+document.getElementById('btn-code').onclick=()=>{
+  document.getElementById('code-view').textContent=generateHTML();
+  document.getElementById('code-modal').style.display='flex';
 };
-document.getElementById('btn-close-code').onclick = () => {
-  document.getElementById('code-modal').style.display = 'none';
-};
-document.getElementById('btn-copy-code').onclick = () => {
-  navigator.clipboard.writeText(generateHTML());
-  showToast('Code copied!');
-};
-
-// ============================================================
-//  DOWNLOAD HTML
-// ============================================================
-document.getElementById('btn-download').onclick = () => {
-  const html = generateHTML();
-  const blob = new Blob([html], { type: 'text/html' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'my-website.html';
-  a.click();
-  showToast('HTML downloaded!');
+document.getElementById('btn-close-code').onclick=()=>document.getElementById('code-modal').style.display='none';
+document.getElementById('btn-copy-code').onclick=()=>{ navigator.clipboard.writeText(generateHTML()); showToast('Code copied'); };
+document.getElementById('btn-download').onclick=()=>{
+  const html=generateHTML();
+  const blob=new Blob([html],{type:'text/html'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='my-website.html'; a.click();
+  showToast('Downloaded!');
 };
 
-function generateHTML() {
-  const hasMap = State.blocks.some(b => b.isMap);
-  const bodyContent = State.blocks.map(b => {
-    const contentEl = canvas.querySelector(`[data-block-id="${b.id}"] .block-content`);
-    return contentEl ? contentEl.innerHTML : b.html;
+function generateHTML(){
+  // Sync all state first
+  collectCurrentState();
+
+  const t=State.theme;
+  const seo=State.seo;
+  const hasMap=State.blocks.some(b=>b.isMap);
+
+  // Map state per block: {mapId, center, zoom, markers}
+  const mapConfigs=[];
+  State.blocks.forEach(b=>{
+    if(!b.isMap) return;
+    // Find mapId from stored HTML
+    const tmp=document.createElement('div');
+    tmp.innerHTML=b.html;
+    const mapEl=tmp.querySelector('[id^="map_"]');
+    if(mapEl){
+      mapConfigs.push({
+        mapId:mapEl.id,
+        center:b.mapData?.center||[22.5726,88.3639],
+        zoom:b.mapData?.zoom||13,
+        markers:b.mapData?.markers||[]
+      });
+    }
+  });
+
+  // Animation CSS
+  const animUsed=State.blocks.filter(b=>b.settings?.animation).length>0;
+  const animCSS=animUsed?`
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideLeft{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes zoomIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+  .anim-fade-in{animation:fadeIn .7s ease forwards}
+  .anim-slide-up{animation:slideUp .7s ease forwards}
+  .anim-slide-left{animation:slideLeft .7s ease forwards}
+  .anim-zoom-in{animation:zoomIn .6s ease forwards}`:'';
+
+  // Gallery CSS
+  const galleryCSS=State.blocks.some(b=>b.isGallery)?`
+  .gallery-slide{display:none}.gallery-slide.active{display:block}
+  .gallery-nav-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);color:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;z-index:5;display:flex;align-items:center;justify-content:center}
+  .gallery-nav-btn:hover{background:rgba(0,0,0,.8)}`:'';
+
+  // Build body HTML: clean each block
+  const bodyParts=State.blocks.map(block=>{
+    const tmp=document.createElement('div');
+    tmp.innerHTML=block.html;
+
+    // 1. Remove contenteditable everywhere
+    tmp.querySelectorAll('[contenteditable]').forEach(el=>{
+      el.removeAttribute('contenteditable');
+    });
+    // 2. Remove data-* builder attributes
+    tmp.querySelectorAll('[data-block-nav],[data-image-block],[data-richtext],[data-table-wrap],[data-gallery]').forEach(el=>{
+      ['data-block-nav','data-image-block','data-richtext','data-table-wrap','data-gallery'].forEach(attr=>el.removeAttribute(attr));
+    });
+    // 3. Apply block-level styles
+    const outerDiv=tmp.firstElementChild;
+    if(outerDiv){
+      const s=block.styles||{};
+      if(s.paddingTop||s.paddingBottom||s.paddingLeft||s.paddingRight){
+        const existing=outerDiv.style.padding||'';
+        if(!existing) outerDiv.style.padding=`${s.paddingTop||0} ${s.paddingRight||0} ${s.paddingBottom||0} ${s.paddingLeft||0}`;
+      }
+      if(s.margin) outerDiv.style.margin=s.margin;
+      if(s.borderRadius) outerDiv.style.borderRadius=s.borderRadius;
+      if(s.shadow) outerDiv.style.boxShadow=s.shadow;
+      if(s.bgColor) outerDiv.style.background=s.bgColor;
+      if(s.bgGradient) outerDiv.style.backgroundImage=s.bgGradient;
+      if(s.bgImage) outerDiv.style.backgroundImage=`url('${s.bgImage}')`, outerDiv.style.backgroundSize='cover', outerDiv.style.backgroundPosition='center';
+      if(s.textAlign) outerDiv.style.textAlign=s.textAlign;
+      if(s.opacity) outerDiv.style.opacity=s.opacity;
+    }
+    // 4. Add animation class
+    if(block.settings?.animation&&outerDiv){
+      outerDiv.className=(outerDiv.className+' anim-'+block.settings.animation).trim();
+    }
+    // 5. Apply ID/class from settings
+    if(block.settings?.elId&&outerDiv) outerDiv.id=block.settings.elId;
+    if(block.settings?.elClass&&outerDiv) outerDiv.className=(outerDiv.className+' '+block.settings.elClass).trim();
+
+    return tmp.innerHTML;
   }).join('\n');
 
-  const primary = document.getElementById('th-primary').value;
-  const secondary = document.getElementById('th-secondary').value;
-  const bg = document.getElementById('th-bg').value;
-  const text = document.getElementById('th-text').value;
-  const font = document.getElementById('th-font').value;
+  // Map init script with full state
+  const mapScript=hasMap&&mapConfigs.length?`
+<script>
+(function(){
+  var maps=${JSON.stringify(mapConfigs)};
+  maps.forEach(function(cfg){
+    var el=document.getElementById(cfg.mapId);
+    if(!el)return;
+    var map=L.map(cfg.mapId).setView(cfg.center,cfg.zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    var bounds=[];
+    cfg.markers.forEach(function(m){
+      var opts={};
+      if(m.icon) opts.icon=L.icon({iconUrl:m.icon,iconSize:[32,32],iconAnchor:[16,32],popupAnchor:[0,-32]});
+      L.marker([m.lat,m.lng],opts)
+        .bindPopup('<strong>'+m.name+'</strong>'+(m.description?'<br><span style="color:#64748b;font-size:12px;">'+m.description+'</span>':''))
+        .bindTooltip(m.name,{direction:'top',offset:[0,-10]})
+        .addTo(map);
+      bounds.push([m.lat,m.lng]);
+    });
+    if(bounds.length>1) map.fitBounds(bounds,{padding:[40,40]});
+  });
+})();
+<\/script>`:'' ;
+
+  // Gallery init script
+  const galleryScript=State.blocks.some(b=>b.isGallery)?`
+<script>
+(function(){
+  document.querySelectorAll('[data-gallery-inner]').forEach(function(inner){
+    var slides=inner.querySelectorAll('[data-slide]');
+    var dots=inner.parentElement.querySelector('[data-gallery-dots]');
+    var speed=parseInt(inner.parentElement.getAttribute('data-speed')||3000);
+    var cur=0;
+    function show(n){
+      slides.forEach(function(s,i){s.style.display=i===n?'block':'none';});
+      if(dots) dots.innerHTML=Array.from(slides).map(function(_,i){
+        return '<span style="display:inline-block;width:'+(i===n?18:8)+'px;height:8px;border-radius:4px;background:'+(i===n?'#fff':'rgba(255,255,255,.3)')+';margin:0 3px;cursor:pointer;transition:all .3s;" onclick="(function(){var gs=this.parentElement.parentElement.querySelectorAll(\'[data-slide]\');gs.forEach(function(s,j){s.style.display=j==='+i+'?\'block\':\'none\';})}).call(this)"></span>';
+      }).join('');
+      cur=n;
+    }
+    var timer=setInterval(function(){show((cur+1)%slides.length);},speed);
+    inner.addEventListener('mouseenter',function(){clearInterval(timer);});
+    inner.addEventListener('mouseleave',function(){timer=setInterval(function(){show((cur+1)%slides.length);},speed);});
+    var nb=inner.querySelector('[data-gallery-next]');
+    var pb=inner.querySelector('[data-gallery-prev]');
+    if(nb) nb.addEventListener('click',function(){clearInterval(timer);show((cur+1)%slides.length);});
+    if(pb) pb.addEventListener('click',function(){clearInterval(timer);show((cur-1+slides.length)%slides.length);});
+    show(0);
+  });
+})();
+<\/script>`:'';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Website</title>
-${hasMap ? '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>' : ''}
+<title>${seo.title||'My Website'}</title>
+<meta name="description" content="${seo.desc||''}">
+${seo.og?`<meta property="og:image" content="${seo.og}">`:'' }
+${hasMap?'<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>':''}
 <style>
-  :root {
-    --primary: ${primary};
-    --secondary: ${secondary};
-    --bg: ${bg};
-    --text: ${text};
-    --font: ${font};
+  :root{
+    --primary:${t.primary};
+    --secondary:${t.secondary};
+    --bg:${t.bg};
+    --text:${t.text};
+    --accent:${t.accent||'#f59e0b'};
+    --font:${t.font};
+    --radius:${t.radius||'12px'};
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--font); background: var(--bg); color: var(--text); }
-  a { text-decoration: none; }
-  .leaflet-map-container { width: 100%; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text)}
+  a{text-decoration:none}
+  img{max-width:100%;height:auto}
+  .leaflet-map-container{width:100%}
+  .map-info-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+  .table-editor-cell{padding:6px 10px;border:1px solid #e2e8f0;min-width:80px;font-size:14px}
+  ${animCSS}
+  ${galleryCSS}
 </style>
 </head>
 <body>
-${bodyContent}
-${hasMap ? `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-<script>
-document.querySelectorAll('[id^="map_"]').forEach(el => {
-  const map = L.map(el.id).setView([22.5726, 88.3639], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
-  L.marker([22.5726, 88.3639]).bindPopup('Location').addTo(map);
-});
-<\/script>` : ''}
+${bodyParts}
+${hasMap?`<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>`:''}
+${mapScript}
+${galleryScript}
 </body>
 </html>`;
 }
 
-// ============================================================
-//  UI POLISH
-// ============================================================
-// Highlight editable on hover
-canvas.addEventListener('mouseover', e => {
-  const ce = e.target.closest('[contenteditable]');
-  if (ce) ce.style.cursor = 'text';
+/* ══════════════════════════════════════════════════════
+   CANVAS CLICK — open map modal via map block click
+══════════════════════════════════════════════════════ */
+canvas.addEventListener('click',e=>{
+  const mapEl=e.target.closest('[id^="map_"]');
+  if(mapEl){
+    const blockEl=mapEl.closest('.canvas-block');
+    if(blockEl){
+      State.activeMapId=blockEl.dataset.blockId;
+      openMapModal(State.activeMapId);
+    }
+  }
 });
+
 </script>
 </body>
 </html>
